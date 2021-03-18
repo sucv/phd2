@@ -1,0 +1,27 @@
+from model.arcface_model import Backbone
+
+import os
+import torch
+from torch import nn
+
+
+class my_res50(nn.Module):
+    def __init__(self, num_classes=8, use_pretrained=True, root_dir=''):
+        super().__init__()
+        self.backbone = Backbone(num_layers=50, drop_ratio=0.6, mode="ir_se")
+        if use_pretrained:
+            path = os.path.join(root_dir, "model_ir_se50.pth")
+            state_dict = torch.load(path, map_location='cpu')
+            self.backbone.load_state_dict(state_dict)
+
+            for param in self.backbone.parameters():
+                param.requires_grad = False
+
+        self.logits = nn.Linear(in_features=512, out_features=num_classes)
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.logits(x)
+        return x
+
+

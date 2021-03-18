@@ -1,0 +1,17 @@
+{
+    "remote_root_directory": "/home/zhangsu/dataset/affectnet/preprocessed",
+    "local_root_directory": "E:\\AffectNet",
+    "local_image_folder": "Manually_Annotated_Images",
+    "local_label_filename_train": "training.csv",
+    "local_label_filename_validate": "validation.csv",
+    "local_output_directory": "E:\\AffectNet\\preprocessed",
+    "output_image_size": 120,
+    "landmark_number": 68,
+    "resize": 120,
+    "center_crop": 112,
+    "use_pretrained": true,
+    "mean": [0.5, 0.5, 0.5],
+    "std": [0.5, 0.5, 0.5],
+    "num_classes": 8,
+    "batch_size": 32
+}

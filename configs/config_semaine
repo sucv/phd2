@@ -1,0 +1,59 @@
+{
+    "root_directory": "/home/zhangsu/dataset/Semaine",
+    "data_folder": "processed_224",
+    "compact_folder": "compacted_224_16_12_80",
+    "frame_size": 224,
+    "frame_number_to_compact": 80,
+    "downsampling_interval": 4,
+    "metrics": ["rmse", "pcc", "ccc"],
+    "emotion_dimension": ["Arousal", "Valence"],
+    "model_name": "ST",
+    "save_model": true,
+    "save_metric_result": true,
+    "fold_number": 5,
+    "fold_number_preprocessing": 10000,
+    "time_depth": 16,
+    "step_size": 12,
+    "data_type": ["frame"],
+    "clip_number_to_load": 128,
+    "batch_size": 4,
+    "epochs": 50,
+    "early_stopping": 15,
+    "data_arranger_shuffle": true,
+    "data_loader_shuffle": true,
+    "openface_config": {
+        "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
+        "input_flag": " -f ",
+        "output_features": " -2Dfp ",
+        "output_action_unit": "",
+        "output_image_flag": " -simalign ",
+        "output_image_format": " -format_aligned jpg ",
+        "output_image_size": " -simsize 224 ",
+        "output_filename_flag": " -of ",
+        "output_directory_flag": " -out_dir "
+    },
+    "intermediate_folder": "intermediate",
+    "modal": ["video"],
+    "label_to_video_ratio": 1,
+    "filename_pattern": {
+        "continuous_label": {
+            "User": {
+                "Arousal": ".+TU.+DA.txt",
+                "Valence": ".+TU.+DV.txt"
+            },
+            "Operator": {
+                "Arousal": ".+TO.+DA.txt",
+                "Valence": ".+TO.+DV.txt"
+            }
+         },
+        "video": {
+            "User": ".+User.+.avi",
+            "Operator": ".+Operator.+.avi"
+         },
+        "session_log": "session.xml"
+    },
+    "emotion_dimension": ["Arousal", "Valence"],
+    "change_video_fps": {
+        "target_fps": 50
+    }
+}

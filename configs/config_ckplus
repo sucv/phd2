@@ -1,0 +1,26 @@
+{
+    "root_directory": "/home/zhangsu/dataset/CK+",
+    "image_folder": "cohn-kanade-images",
+    "label_folder": "Emotion",
+    "remote_root_directory": "/home/zhangsu/dataset/CK+/Cropped",
+    "resize": 120,
+    "center_crop": 112,
+    "mean": [0.5, 0.5, 0.5],
+    "std": [0.5, 0.5, 0.5],
+    "num_classes": 8,
+    "batch_size": 32,
+    "use_pretrained": true,
+    "openface_config": {
+        "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
+        "input_flag": " -fdir ",
+        "output_features": " -2Dfp ",
+        "output_action_unit": "",
+        "output_image_flag": " -simalign ",
+        "output_image_mask_flag": " -nomask ",
+        "output_image_format": " -format_aligned jpg ",
+        "output_image_size": " -simsize 120 ",
+        "output_filename_flag": " -of ",
+        "output_directory_flag": " -out_dir "
+    }
+
+}

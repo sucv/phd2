@@ -1,0 +1,48 @@
+{
+    "root_directory": "/home/zhangsu/dataset/mahnob",
+    "output_folder": "processed",
+    "modal": ["video", "eeg"],
+    "metrics": ["rmse", "pcc", "ccc"],
+    "downsampling_interval_dict": {
+        "frame": 16,
+        "eeg": 64,
+        "continuous_label": 1
+    },
+    "time_depth": 24,
+    "step_size": 8,
+    "continuous_label_frequency": 4,
+    "frame_size": 120,
+    "crop_size": 112,
+    "batch_size": 2,
+    "filename_pattern": {
+        "continuous_label": "lable_continous_Mahnob.mat",
+        "video": "P{}.+Section_{}.avi",
+        "eeg": "Part_{}.+Trial{}.+bdf",
+        "timestamp": "P{}.+Section_{}.tsv",
+        "session_log": "session.xml"
+    },
+    "session_number": 239,
+
+    "change_video_fps": {
+        "target_fps": 64
+    },
+
+    "openface_config": {
+        "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
+        "input_flag": " -f ",
+        "output_features": " -2Dfp ",
+        "output_action_unit": "-aus",
+        "output_image_flag": " -simalign ",
+        "output_image_format": "-format_aligned jpg ",
+        "output_image_size": " -simsize 120 ",
+        "output_filename_flag": " -of ",
+        "output_directory_flag": " -out_dir ",
+        "output_image_mask_flag": " -nomask "
+    },
+
+    "dataset_folder_structuring": {
+        "output_directory": "dataset",
+        "continuous_label_column":  ["time", "valence"]
+    }
+
+}

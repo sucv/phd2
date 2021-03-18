@@ -1,0 +1,14 @@
+{
+    "remote_root_directory": "/home/zhangsu/dataset/rafdb/preprocessed",
+    "local_root_directory": "E:\\RAF_DB",
+    "local_image_folder": "Image\\aligned",
+    "local_label_filename": "list_patition_label.txt",
+    "local_output_directory": "E:\\RAF_DB\\preprocessed",
+    "use_pretrained": true,
+    "resize": 120,
+    "center_crop": 112,
+    "mean": [0.5, 0.5, 0.5],
+    "std": [0.5, 0.5, 0.5],
+    "num_classes": 7,
+    "batch_size": 32
+}

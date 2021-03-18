@@ -1,0 +1,24 @@
+{
+    "root_directory": "E:\\rafd",
+    "output_directory": "E:\\rafd\\preprocessed",
+    "remote_root_directory": "/home/zhangsu/dataset/rafd/Cropped",
+    "resize": 120,
+    "center_crop": 112,
+    "use_pretrained": true,
+    "mean": [0.5, 0.5, 0.5],
+    "std": [0.5, 0.5, 0.5],
+    "num_classes": 8,
+    "batch_size": 32,
+    "openface_config": {
+        "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
+        "input_flag": " -f ",
+        "output_features": " -2Dfp ",
+        "output_action_unit": "",
+        "output_image_flag": " -simalign ",
+        "output_image_mask_flag": " -nomask ",
+        "output_image_format": " -format_aligned jpg ",
+        "output_image_size": " -simsize 120 ",
+        "output_filename_flag": " -of ",
+        "output_directory_flag": " -out_dir "
+    }
+}
