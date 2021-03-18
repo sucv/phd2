@@ -38,9 +38,9 @@ class Experiment(GenericExperiment):
         self.model_load_path = args.model_load_path
         self.model_save_path = args.model_save_path
 
-        if args.model_load_path == '':
-            self.gpu = args.gpu
-            self.cpu = args.cpu
+        # if args.model_load_path == '':
+        self.gpu = args.gpu
+        self.cpu = args.cpu
 
         self.device = self.init_device()
 

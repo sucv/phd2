@@ -1,0 +1,52 @@
+{
+    "remote_root_directory": "/home/zhangsu/dataset/Semaine",
+    "local_root_directory": "H:\\Dataset\\Video\\Semaine",
+    "raw_data_folder": "Sessions",
+    "openface_output_folder": "processed_224",
+    "npy_folder": "compacted_48",
+    "downsampling_interval_dict": {
+        "frame": 1,
+        "continuous_label": 1
+    },
+    "metrics": ["rmse", "pcc", "ccc"],
+    "emotion_dimension": ["Arousal", "Valence"],
+    "fold_number": 5,
+    "fold_number_preprocessing": 10000,
+    "frame_size": 48,
+    "window_length": 16,
+    "hop_size": 12,
+    "batch_size": 2,
+    "epochs": 50,
+    "early_stopping": 15,
+
+    "openface_config": {
+        "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
+        "input_flag": " -f ",
+        "output_features": " -2Dfp ",
+        "output_action_unit": "",
+        "output_image_flag": " -simalign ",
+        "output_image_format": " -format_aligned jpg ",
+        "output_image_size": " -simsize 224 ",
+        "output_filename_flag": " -of ",
+        "output_directory_flag": " -out_dir "
+    },
+    "intermediate_folder": "intermediate",
+    "filename_pattern": {
+        "continuous_label": {
+            "User": {
+                "Arousal": ".+TU.+DA.txt",
+                "Valence": ".+TU.+DV.txt"
+            },
+            "Operator": {
+                "Arousal": ".+TO.+DA.txt",
+                "Valence": ".+TO.+DV.txt"
+            }
+         },
+        "video": {
+            "User": ".+User.+.avi",
+            "Operator": ".+Operator.+.avi"
+         },
+        "session_log": "session.xml"
+    },
+    "target_fps": 50
+}

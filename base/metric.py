@@ -127,6 +127,15 @@ class ConcordanceCorrelationCoefficient:
 
         return ccc_agreement
 
+def concordance_correlation_coefficient_centering(data):
+    r"""
+    Perform the CCC centering.
+    :param data: (ndarray), the continuous labels to be centered.
+    :return: (ndarray), the centered data.
+    """
+    CCC = ConcordanceCorrelationCoefficient(data)
+    centered_data = CCC.centered_data
+    return centered_data
 
 class ContinuousMetricsCalculator:
     r"""
@@ -235,3 +244,5 @@ class ContinuousMetricsCalculator:
                 partitionwise_dict[metric].append(result)
 
             self.metric_record_dict['overall'][emotion] = partitionwise_dict
+
+

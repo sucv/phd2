@@ -51,7 +51,7 @@ class Checkpointer(GenericCheckpointer):
 
         csv_records = [time.time(), epoch, int(self.trainer.best_epoch_info['epoch']), num_layers_to_update,
                        self.trainer.optimizer.param_groups[0]['lr'], self.trainer.train_losses[-1],
-                       self.trainer.validate_loss[-1]]
+                       self.trainer.validate_losses[-1]]
 
         if self.trainer.head == "single-headed":
             if self.trainer.train_emotion == "arousal":
@@ -99,8 +99,8 @@ class Checkpointer(GenericCheckpointer):
                                    'val_rmse_v', 'val_pcc_v_v', 'val_pcc_v_conf', 'val_ccc_v'])
 
         df = pd.DataFrame(columns=self.columns)
-        csv_filename = self.trainer.model_path[:-4] + ".csv"
-        df.to_csv(csv_filename, index=False)
+        self.trainer.csv_filename = self.trainer.model_path[:-4] + ".csv"
+        df.to_csv(self.trainer.csv_filename, index=False)
 
     def read_checkpoint(self):
         if self.checkpoint['current_model_weights']:
@@ -117,5 +117,6 @@ class Checkpointer(GenericCheckpointer):
             self.trainer.optimizer = self.checkpoint['optimizer']
             self.trainer.scheduler = self.checkpoint['scheduler']
             self.trainer.parameter_control = self.checkpoint['param_control']
+            self.trainer.model.load_state_dict(self.trainer.current_model_weights)
         else:
             self.init_csv_logger()

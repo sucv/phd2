@@ -67,7 +67,6 @@ class AVEC19Trainer(GenericTrainer):
         self.model_path = os.path.join(self.model_folder, "state_dict.pth")
         self.model = model.to(device)
 
-
         self.init_optimizer_and_scheduler()
 
         # Initialize the loss function.
@@ -195,7 +194,8 @@ class AVEC19Trainer(GenericTrainer):
             improvement = False
 
             if self.train_emotion == "both":
-                validate_ccc = np.mean([validate_record_dict['overall'][emotion]['ccc'] for emotion in self.emotional_dimension])
+                validate_ccc = np.mean(
+                    [validate_record_dict['overall'][emotion]['ccc'] for emotion in self.emotional_dimension])
             elif self.train_emotion == "arousal":
                 validate_ccc = np.mean(validate_record_dict['overall']['Arousal']['ccc'])
             elif self.train_emotion == "valence":
@@ -259,9 +259,7 @@ class AVEC19Trainer(GenericTrainer):
 
             checkpoint_controller.save_log_to_csv(
                 epoch, train_record_dict['overall'], validate_record_dict['overall'])
-            # if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            #     self.scheduler.step(validate_loss)
-            # else:
+
             self.scheduler.step(validate_loss)
 
             checkpoint_controller.save_checkpoint(epoch, directory_to_save_checkpoint_and_plot)
@@ -273,7 +271,6 @@ class AVEC19Trainer(GenericTrainer):
 
         if save_model:
             torch.save(self.model.state_dict(), self.model_path)
-
 
     def loop(self, data_loader, length_to_track, directory_to_save_checkpoint_and_plot, epoch, train_mode=True):
         running_loss = 0.0

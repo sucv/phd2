@@ -1,5 +1,7 @@
-import numpy as np
 import os
+import numpy as np
+import pandas as pd
+
 
 def generate_trial_info(dataset_info):
     r"""
@@ -18,6 +20,7 @@ def generate_trial_info(dataset_info):
 
     dataset_info['trial_id'] = trial_info
     return dataset_info
+
 
 def read_semaine_xml_for_dataset_info(xml_file, role):
     r"""
@@ -64,6 +67,65 @@ def read_semaine_xml_for_dataset_info(xml_file, role):
             "feeltrace_bool": int(feeltrace_bool)}
 
     return info
+
+
+def continuous_label_to_csv(
+        root_directory,
+        output_folder,
+        continuous_labels,
+        dataset_info,
+):
+    r"""
+    Save the continuous label to csv files.
+    :param root_directory: (str), the root directory of the dataset.
+    :param output_folder: (str), the output folder.
+    :param continuous_labels: (dict), the dictionary saving the continuous labels.
+    :param dataset_info: (dict), the dictionary saving the dataset information.
+    """
+
+    # If feeltrace_bool is not contained in dataset_info
+    indices_having_continuous_label = range(len(dataset_info['subject_id']))
+    # Otherwise, exclude all indices having no continuous trace.
+    if 'feeltrace_bool' in dataset_info:
+        indices_having_continuous_label = np.where(dataset_info['feeltrace_bool'] == 1)[0]
+
+    for index, session_id in enumerate(indices_having_continuous_label):
+
+        # If no trial information is contained.
+        csv_recording_file = "P{}".format(dataset_info['subject_id'][session_id])
+        # Otherwise, fill in the trial_id.
+        if 'trial_id' in dataset_info:
+            csv_recording_file = "P{}-T{}".format(dataset_info['subject_id'][session_id],
+                                                  dataset_info['trial_id'][session_id])
+
+        csv_recording_filename = os.path.join(
+            root_directory, output_folder, csv_recording_file + ".csv")
+
+        output_csv_continuous_label_filename = os.path.join(
+            root_directory, output_folder, csv_recording_file + "_continuous_label.csv")
+
+        output_csv_success_indices_filename = os.path.join(
+            root_directory, output_folder, csv_recording_file + "_success_indices.csv")
+
+        # If the output file does not exist, save the csv file indicating the face
+        # detection success of each frame, and also the csv file saving the continuous labels.
+        if not os.path.isfile(output_csv_continuous_label_filename) \
+                and not os.path.isfile(output_csv_continuous_label_filename):
+            frame_indices = pd.read_csv(csv_recording_filename,
+                                        skipinitialspace=True, usecols=["success"],
+                                        index_col=False).values.squeeze()
+            success_frame_indices = np.where(frame_indices == 1)[0]
+
+            # Saving the continuous label for the successful and failed frames.
+            continuous_labels_for_this_subject_trial = {emotion: data[index]
+                                                        for emotion, data in continuous_labels.items()}
+
+            data_frame = pd.DataFrame(data=continuous_labels_for_this_subject_trial)
+            data_frame.to_csv(output_csv_continuous_label_filename, index=False)
+
+            # Saving the indices indicating the successful frames.
+            data_frame = pd.DataFrame(success_frame_indices, columns=["success"])
+            data_frame.to_csv(output_csv_success_indices_filename, index=False)
 
 
 def ndarray_to_txt_hauler(input_ndarray, output_txt, column_name, time_interval):

@@ -1,11 +1,10 @@
-from model.model import my_res50
-from model.temporal_convolutional_model import TemporalConvNet
+from models.model import my_res50
+from models.temporal_convolutional_model import TemporalConvNet
 
 import os
 
 import torch
 from torch import nn
-
 
 
 class my_2d1d(nn.Module):

@@ -206,7 +206,7 @@ class OpenFaceController(object):
 
         # Quote the file name if spaces occurred.
         if " " in input_filename:
-            file = '"' + input_filename + '"'
+            input_filename = '"' + input_filename + '"'
 
         command = self.get_openface_command(**kwargs)
         command = command.format(
@@ -222,14 +222,9 @@ class OpenFaceController(object):
         indices_having_continuous_label = self.get_indices_having_continuous_label(dataset_info)
 
         for i, file in tqdm(enumerate(video_list)):
-            # Quote the file name if spaces occurred.
-            if " " in file:
-                file = '"' + file + '"'
-
             session_id = indices_having_continuous_label[i]
             output_filename = self.get_output_filename(dataset_info, session_id)
             processed_filename = self.process_video(input_filename=file, output_filename=output_filename, **kwargs)
             processed_video_list.append(processed_filename)
 
         return processed_video_list
-

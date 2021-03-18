@@ -6,6 +6,18 @@ import pandas as pd
 import cv2
 import torch
 
+def dict_combine(main_dict, new_dict):
+    r"""
+    Combine two dictionaries having the same keys.
+    :param main_dict: (dict), the main dictionary to be appended.
+    :param new_dict: (dict), the given dictionary to append.
+    :return: (dict), the combined dictionary.
+    """
+    for (key, value) in main_dict.items():
+        if new_dict[key] != [] or "":
+            main_dict[key].append(new_dict[key])
+
+    return main_dict
 
 def get_video_length(video_filename):
     video = cv2.VideoCapture(video_filename)
