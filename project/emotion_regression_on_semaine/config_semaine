@@ -1,8 +1,8 @@
 {
     "remote_root_directory": "/home/zhangsu/dataset/Semaine",
-    "local_root_directory": "H:\\Dataset\\Video\\Semaine",
+    "local_root_directory": "F:\\Semaine",
     "raw_data_folder": "Sessions",
-    "openface_output_folder": "processed_224",
+    "openface_output_folder": "processed_48",
     "npy_folder": "compacted_48",
     "downsampling_interval_dict": {
         "frame": 1,
@@ -26,9 +26,10 @@
         "output_action_unit": "",
         "output_image_flag": " -simalign ",
         "output_image_format": " -format_aligned jpg ",
-        "output_image_size": " -simsize 224 ",
+        "output_image_size": " -simsize 48 ",
         "output_filename_flag": " -of ",
-        "output_directory_flag": " -out_dir "
+        "output_directory_flag": " -out_dir ",
+        "output_image_mask_flag": " -nomask "
     },
     "intermediate_folder": "intermediate",
     "filename_pattern": {

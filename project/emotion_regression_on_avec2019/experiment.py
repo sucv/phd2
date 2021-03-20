@@ -1,14 +1,12 @@
 from base.experiment import GenericExperiment
-from project.emotion_regression_on_avec2019.dataset import AVEC2019Arranger, AVEC19Dataset
+from project.emotion_regression_on_avec2019.dataset import AVEC2019Arranger, AVEC2019Dataset
 from project.emotion_regression_on_avec2019.checkpointer import Checkpointer
-from project.emotion_regression_on_avec2019.trainer import AVEC19Trainer
+from project.emotion_regression_on_avec2019.trainer import AVEC2019Trainer
 from project.emotion_regression_on_avec2019.model import my_2d1d, my_2dlstm
 from project.emotion_regression_on_avec2019.parameter_control import ParamControl
 from base.loss_function import CCCLoss
 
-import json
 import os
-
 
 import torch
 import torch.nn
@@ -105,16 +103,16 @@ class Experiment(GenericExperiment):
 
         length_dict = arranger.make_length_dict(train_country=self.train_country,
                                                 validate_country=self.validate_country)
-        train_dataset = AVEC19Dataset(self.config, data_dict['train'], time_delay=self.time_delay,
-                                      emotion=self.train_emotion,
-                                      head=self.head, mode='train')
+        train_dataset = AVEC2019Dataset(self.config, data_dict['train'], time_delay=self.time_delay,
+                                        emotion=self.train_emotion,
+                                        head=self.head, mode='train')
         train_loader = torch.utils.data.DataLoader(
             dataset=train_dataset, batch_size=self.config['batch_size'], shuffle=True)
 
-        validate_dataset = AVEC19Dataset(self.config, data_dict['validate'], time_delay=self.time_delay,
-                                         emotion=self.train_emotion, head=self.head, mode='validate')
+        validate_dataset = AVEC2019Dataset(self.config, data_dict['validate'], time_delay=self.time_delay,
+                                           emotion=self.train_emotion, head=self.head, mode='validate')
         validate_loader = torch.utils.data.DataLoader(
-            dataset=validate_dataset, batch_size=self.config['batch_size'], shuffle=False)
+            dataset=validate_dataset, batch_size=1, shuffle=False)
 
         dataloader_dict = {'train': train_loader, 'validate': validate_loader}
         return dataloader_dict, length_dict
@@ -128,26 +126,26 @@ class Experiment(GenericExperiment):
 
         # Load the checkpoint.
         checkpoint_keys = ['time_fit_start', 'csv_filename', 'start_epoch', 'early_stopping_counter', 'best_epoch_info',
-                           'combined_train_record_dict', 'combined_validate_record_dict', 'train_losses', 'validate_losses',
+                           'combined_train_record_dict', 'combined_validate_record_dict', 'train_losses',
+                           'validate_losses',
                            'current_model_weights', 'optimizer', 'scheduler', 'param_control', 'fit_finished']
         checkpoint_filename = os.path.join(directory_to_save_checkpoint_and_plot, "checkpoint.pkl")
-
 
         criterion = CCCLoss()
         model = self.init_model("my_res50_fer+")
         dataloader_dict, length_dict = self.init_dataloader()
 
         milestone = [1000]
-        trainer = AVEC19Trainer(model, stamp=self.stamp, model_name=self.model_name, learning_rate=self.learning_rate,
-                                metrics=self.config['metrics'], model_path=self.model_save_path,
-                                train_emotion=self.train_emotion, patience=self.patience,
-                                emotional_dimension=self.emotion_dimension, head=self.head,
-                                milestone=milestone, criterion=criterion, verbose=True, device=self.device)
+        trainer = AVEC2019Trainer(model, stamp=self.stamp, model_name=self.model_name, learning_rate=self.learning_rate,
+                                  metrics=self.config['metrics'], model_path=self.model_save_path,
+                                  train_emotion=self.train_emotion, patience=self.patience,
+                                  emotional_dimension=self.emotion_dimension, head=self.head,
+                                  milestone=milestone, criterion=criterion, verbose=True, device=self.device)
 
         checkpoint_controller = Checkpointer(checkpoint_keys, checkpoint_filename, trainer)
         checkpoint_controller.load_checkpoint()
 
-        parameter_controller = ParamControl(trainer, release_count=5)
+        parameter_controller = ParamControl(trainer, release_count=8)
 
         trainer.fit(dataloader_dict, length_dict, num_epochs=200, early_stopping=50, min_num_epoch=0,
                     directory_to_save_checkpoint_and_plot=directory_to_save_checkpoint_and_plot, save_model=True,

@@ -84,22 +84,24 @@ class ConcordanceCorrelationCoefficient:
         return cnk_matrix.astype(int)
 
     @staticmethod
-    def calculate_ccc(array1, array2):
+    def calculate_ccc(x, y):
         """
         Calculate the CCC.
-        :param array1: (ndarray), an 1xn array.
-        :param array2: (ndarray), another 1xn array.
+        :param x: (ndarray), an 1xn array.
+        :param y: (ndarray), another 1xn array.
         :return: the CCC.
         """
-        array1_mean = np.mean(array1)
-        array2_mean = np.mean(array2)
 
-        array1_var = np.var(array1, ddof=1)
-        array2_var = np.var(array2, ddof=1)
+        x_mean = np.nanmean(x)
+        y_mean = np.nanmean(y)
+        covariance = np.nanmean((x - x_mean) * (y - y_mean))
+        # Make it consistent with Matlab's nanvar (division by len(x)-1, not len(x)))
+        x_var = 1.0 / (len(x) - 1) * np.nansum((x - x_mean) ** 2)
+        y_var = 1.0 / (len(y) - 1) * np.nansum((y - y_mean) ** 2)
 
-        covariance = np.mean((array1 - array1_mean) * (array2 - array2_mean))
-        concordance_correlation_coefficient = (2 * covariance) / (
-                array1_var + array2_var + (array1_mean - array2_mean) ** 2 + 1e-100)
+        concordance_correlation_coefficient = \
+            (2 * covariance) / (x_var + y_var + (x_mean - y_mean) ** 2 + 1e-100)
+
         return concordance_correlation_coefficient
 
     def calculate_paired_ccc(self):
@@ -236,8 +238,8 @@ class ContinuousMetricsCalculator:
         # Partition-wise evaluation
         for emotion in self.emotional_dimension:
             partitionwise_dict = {metric: [] for metric in self.metrics}
-            output = np.asarray(partitionwise_output[emotion][0])
-            label = np.asarray(partitionwise_continuous_label[emotion][0])
+            output = np.asarray(partitionwise_output[emotion])
+            label = np.asarray(partitionwise_continuous_label[emotion])
 
             for metric in self.metrics:
                 result = self.calculator(output, label, metric)

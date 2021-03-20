@@ -17,7 +17,7 @@ from torch import nn, optim
 import torch.utils.data
 
 
-class AVEC19Trainer(GenericTrainer):
+class AVEC2019Trainer(GenericTrainer):
     def __init__(
             self,
             model,
@@ -93,7 +93,7 @@ class AVEC19Trainer(GenericTrainer):
 
     def init_optimizer_and_scheduler(self):
         self.optimizer = optim.Adam(self.get_parameters(), lr=self.learning_rate, weight_decay=0.001)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max')
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience)
 
     def get_parameters(self):
         r"""
@@ -114,11 +114,15 @@ class AVEC19Trainer(GenericTrainer):
 
     def train(self, data_loader, length_to_track, directory_to_save_checkpoint_and_plot, epoch):
         self.model.train()
-        return self.loop(data_loader, length_to_track, directory_to_save_checkpoint_and_plot, epoch, train_mode=True)
+        loss, result_dict = self.loop(data_loader, length_to_track, directory_to_save_checkpoint_and_plot, epoch,
+                                      train_mode=True)
+        return loss, result_dict
 
     def validate(self, data_loader, length_to_track, directory_to_save_checkpoint_and_plot, epoch):
-        self.model.eval()
-        return self.loop(data_loader, length_to_track, directory_to_save_checkpoint_and_plot, epoch, train_mode=False)
+        with torch.no_grad():
+            self.model.eval()
+            loss, result_dict = self.loop(data_loader, length_to_track, directory_to_save_checkpoint_and_plot, epoch, train_mode=False)
+        return loss, result_dict
 
     def fit(
             self,
@@ -127,7 +131,6 @@ class AVEC19Trainer(GenericTrainer):
             num_epochs=100,
             early_stopping=20,
             min_num_epoch=10,
-            clipwise_frame_number=160,
             checkpoint_controller=None,
             parameter_controller=None,
             directory_to_save_checkpoint_and_plot=None,
@@ -167,6 +170,7 @@ class AVEC19Trainer(GenericTrainer):
         # Loop the epochs
         for epoch in np.arange(self.start_epoch, num_epochs):
             if parameter_controller.get_current_lr() < 1e-7:
+            # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
                 parameter_controller.release_param()
 
             time_epoch_start = time.time()
@@ -260,7 +264,7 @@ class AVEC19Trainer(GenericTrainer):
             checkpoint_controller.save_log_to_csv(
                 epoch, train_record_dict['overall'], validate_record_dict['overall'])
 
-            self.scheduler.step(validate_loss)
+            self.scheduler.step(validate_ccc)
 
             checkpoint_controller.save_checkpoint(epoch, directory_to_save_checkpoint_and_plot)
 
@@ -312,9 +316,9 @@ class AVEC19Trainer(GenericTrainer):
             output_handler.place_clip_output_to_subjectwise_dict(outputs.detach().cpu().numpy(), indices, sessions)
             continuous_label_handler.place_clip_output_to_subjectwise_dict(labels.detach().cpu().numpy(), indices,
                                                                            sessions)
-            loss = self.criterion(outputs, labels) * outputs.size(0)
+            loss = self.criterion(outputs, labels)
 
-            running_loss += loss.mean().item()
+            running_loss += loss.mean().item() * outputs.size(0)
 
             if train_mode:
                 loss.backward(loss_weights, retain_graph=True)

@@ -38,7 +38,7 @@ class ContinuousOutputHandlerNPY(object):
     def get_partitionwise_dict(self):
         for emotion in self.emotion_dimension:
             for subject_id in self.subjectwise_dict:
-                self.partitionwise_dict[emotion].append(self.subjectwise_dict[subject_id][emotion])
+                self.partitionwise_dict[emotion].extend(self.subjectwise_dict[subject_id][emotion])
 
     def get_sessionwise_dict(self):
         self.average_subjectwise_output()

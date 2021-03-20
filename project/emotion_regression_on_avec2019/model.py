@@ -1,5 +1,6 @@
 from models.model import my_res50
 from models.temporal_convolutional_model import TemporalConvNet
+from haifeng.model import FerIRResnet50
 
 import os
 

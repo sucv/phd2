@@ -63,34 +63,64 @@ class AVEC2019Arranger(VideoEmoRegressionArranger):
             partition = self.get_partition(self.dataset_info['partition_country_to_participant_trial_map'][trial])
             session = trial_directory.split(os.sep)[-1]
             length = self.dataset_info['frame_count'][index] // 5
-            num_windows = int(np.ceil((length - self.window_length) / self.hop_size)) + 1
+
             item_list = []
 
-            for window in range(num_windows):
-                start = window * self.hop_size
-                end = start + self.window_length
+            # sampler_length = self.window_length
+            # if partition == "Devel":
+            #     sampler_length = length
 
-                if end > length:
-                    break
+            # if partition == "Train":
+            sampler_length = self.window_length
+            start = 0
+            end = start + sampler_length
 
+            while end <= length:
                 indices = np.arange(start, end)
                 item_list.append([trial_directory, indices, session])
+                start = start + self.hop_size
+                end = start + sampler_length
 
-            if (length - self.window_length) % self.hop_size != 0:
-                start = length - self.window_length
+            if end > length:
                 end = length
+                start = length - sampler_length
                 indices = np.arange(start, end)
                 item_list.append([trial_directory, indices, session])
 
+            # else:
+            #     start = 0
+            #     end = length
+            #     indices = np.arange(start, end)
+            #     item_list.append([trial_directory, indices, session])
+
+            data_dict[partition][country].extend(item_list)
+
+            # for window in range(num_windows):
+            #     start = window * self.hop_size
+            #     end = start + self.window_length
+            #
+            #     if end > length:
+            #         break
+            #
+            #     indices = np.arange(start, end)
+            #     item_list.append([trial_directory, indices, session])
+            #
+            # if (length - self.window_length) % self.hop_size != 0:
+            #     start = length - self.window_length
+            #     end = length
+            #     indices = np.arange(start, end)
+            #     item_list.append([trial_directory, indices, session])
+
+            # ==================================
             # if partition == 'Train':
             #     for window in range(num_windows):
-            #         start = window * self.step_size
-            #         end = start + self.time_depth
+            #         start = window * self.hop_size
+            #         end = start + self.window_length
             #         indices = np.arange(start, end)
             #         item_list.append([trial_directory, indices, session])
             #
-            #     if (length - self.time_depth) % self.step_size != 0:
-            #         start = length - self.time_depth
+            #     if (length - self.window_length) % self.hop_size != 0:
+            #         start = length - self.window_length
             #         end = length
             #         indices = np.arange(start, end)
             #         item_list.append([trial_directory, indices, session])
@@ -101,8 +131,8 @@ class AVEC2019Arranger(VideoEmoRegressionArranger):
             #     item_list.append([trial_directory, indices, session])
             # else:
             #     raise ValueError('Partition not supported!')
-
-            data_dict[partition][country].extend(item_list)
+            #
+            # data_dict[partition][country].extend(item_list)
 
         return data_dict
 
@@ -141,7 +171,7 @@ class AVEC2019Arranger(VideoEmoRegressionArranger):
         return country
 
 
-class AVEC19Dataset(Dataset):
+class AVEC2019Dataset(Dataset):
     def __init__(self, config, data_list, time_delay=0, emotion="a", head="multi-headed", mode='train'):
         self.config = config
         self.mode = mode

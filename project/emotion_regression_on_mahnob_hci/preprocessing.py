@@ -45,7 +45,7 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
 
 
         self.video_preprocessing()
-        self.dataset_info['output_folder'] = self.get_output_folder_list()
+        self.dataset_info['npy_output_folder'] = self.get_npy_output_folder_list()
 
         # Carry out the eeg preprocessing.
         # Filter the signal by bandpass filter ---> Filter the signal by notch filter
@@ -53,16 +53,12 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
         self.eeg_preprocessing()
 
 
-        self.create_npy_for_frame()
-        self.create_npy_for_success()
-        self.create_npy_for_continuous_label()
-
         # Get the length (the amount of images in each folder)
         self.dataset_info['processed_length'] = self.get_processed_video_length()
 
         self.dataset_info['refined_processed_length'] = self.refine_processed_video_length()
 
-        self.dataset_info['session_name'] = [directory.split(os.sep)[-1] for directory in self.dataset_info['output_folder']]
+        self.dataset_info['session_name'] = [directory.split(os.sep)[-1] for directory in self.dataset_info['npy_output_folder']]
 
         self.create_npy_for_frame()
         self.create_npy_for_continuous_label()
@@ -86,14 +82,14 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
     def create_npy_for_frame(self):
 
         for i, folder in tqdm(enumerate(range(self.session_number))):
-            npy_directory = self.dataset_info['output_folder'][i]
+            npy_directory = self.dataset_info['npy_output_folder'][i]
             folder = self.dataset_info['processed_folder'][i] + "_aligned"
             os.makedirs(npy_directory, exist_ok=True)
             npy_filename_frame = os.path.join(npy_directory, "frame.npy")
             if not os.path.isfile(npy_filename_frame):
                 frame_length = self.dataset_info['refined_processed_length'][i] * 16
                 frame_list = get_filename_from_a_folder_given_extension(folder, ".jpg")[:frame_length]
-                frame_matrix = np.zeros((frame_length, 120, 120, 3), dtype=np.uint8)
+                frame_matrix = np.zeros((frame_length, self.frame_size, self.frame_size, 3), dtype=np.uint8)
 
                 for j, frame in enumerate(frame_list):
                     frame_matrix[j] = Image.open(frame)
@@ -106,7 +102,7 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
         pointer = 0
         for i, folder in tqdm(enumerate(range(self.session_number))):
             if self.dataset_info['having_continuous_label'][i]:
-                npy_directory = self.dataset_info['output_folder'][i]
+                npy_directory = self.dataset_info['npy_output_folder'][i]
                 os.makedirs(npy_directory, exist_ok=True)
                 npy_filename_frame = os.path.join(npy_directory, "continuous_label.npy")
                 if not os.path.isfile(npy_filename_frame):
@@ -120,12 +116,12 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
                 else:
                     pointer += 1
 
-    def get_output_folder_list(self):
-        output_folder_list = []
+    def get_npy_output_folder_list(self):
+        npy_output_folder_list = []
         for folder in self.dataset_info['processed_folder']:
-            output_folder = folder.replace("processed", "compacted_" + str(self.frame_size))
-            output_folder_list.append(output_folder)
-        return output_folder_list
+            npy_output_folder = folder.replace("processed_" + str(self.frame_size), "compacted_" + str(self.frame_size))
+            npy_output_folder_list.append(npy_output_folder)
+        return npy_output_folder_list
 
     def count_session(self):
         r"""
@@ -321,7 +317,7 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
         for index in tqdm(range(len(self.dataset_info['session_id']))):
 
             if self.dataset_info['having_eeg'][index]:
-                output_directory = self.dataset_info['output_folder'][index]
+                output_directory = self.dataset_info['npy_output_folder'][index]
                 os.makedirs(output_directory, exist_ok=True)
                 output_file = os.path.join(output_directory, "eeg_raw.npy")
 

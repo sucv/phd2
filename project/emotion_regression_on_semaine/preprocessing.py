@@ -60,10 +60,11 @@ class PreprocessingSEMAINE(GenericVideoPreprocessing):
 
         self.target_fps = config['target_fps']
 
-        # Carry out the video preprocessing,
-        # Alter the fps ---> Trim the video ---> Extract the facial fiducial points
-        #  ---> crop the video frames ---> save to images
-        self.video_preprocessing()
+
+        # # Carry out the video preprocessing,
+        # # Alter the fps ---> Trim the video ---> Extract the facial fiducial points
+        # #  ---> crop the video frames ---> save to images
+        # self.video_preprocessing()
 
         # Carryout the label preprocessing.
         # Perform the CCC centering ---> Save both the continuous label
@@ -291,41 +292,72 @@ class PreprocessingSEMAINE(GenericVideoPreprocessing):
 
         return label_dict
 
+    def label_ccc_centering(self):
+        r"""
+                Carry out the label preprocessing. Here, since multiple raters are available, therefore
+                    concordance_correlation_coefficient_centering has to be performed.
+                """
+        centered_continuous_label_dict = {key: [] for key in self.emotion_dimension}
+
+        for emotion in self.emotion_dimension:
+            continuous_labels = self.continuous_label_list[emotion]
+            for continuous_label in continuous_labels:
+                centered_continuous_label = concordance_correlation_coefficient_centering(continuous_label)
+                centered_continuous_label_dict[emotion].append(np.float32(np.mean(centered_continuous_label, axis=0)))
+
+        return centered_continuous_label_dict
+
     def video_preprocessing(self):
         r"""
         Carry out the video preprocessing.
         """
         video_list = self.get_video_list_by_pattern(self.filename_pattern['video'])
 
-        # # Change the fps of the video to a integer.
-        # param = self.change_video_fps_config
-        # video_list = change_video_fps(video_list, **param)
+        # Change the fps of the video to a integer.
+        video_list = change_video_fps(video_list, self.target_fps)
 
         # Pick only the annotated clips from a complete video.
         video_list = combine_annotated_clips(
             video_list, self.dataset_info['trim_range'], direct_copy=False, visualize=False)
 
+        output_directory = os.path.join(self.root_directory, self.openface_output_folder)
+        os.makedirs(output_directory, exist_ok=True)
+
         # Extract facial landmark, warp, crop, and save each frame.
-        param = self.openface_config
-        file_list = facial_video_preprocessing_by_openface(
-            self.root_directory, self.output_folder, self.dataset_info, video_list, **param)
+        openface = OpenFaceController(openface_path=self.openface_config['openface_directory'],
+                                      output_directory=output_directory)
+        video_list = openface.process_video_list(video_list=video_list, dataset_info=self.dataset_info, **self.openface_config)
+
+        # Save the static folders
+        self.dataset_info['processed_folder'] = video_list
 
     def label_preprocessing(self):
-        r"""
-        Carry out the label preprocessing. Here, since multiple raters are available, therefore
-            concordance_correlation_coefficient_centering has to be performed.
-        """
-        centered_continuous_label_dict = {key: [] for key in self.emotion_dimension}
 
-        for emotion in self.emotion_dimension:
-            continuous_labels = self.continuous_label[emotion]
-            for continuous_label in continuous_labels:
-                centered_continuous_label = concordance_correlation_coefficient_centering(continuous_label)
-                centered_continuous_label_dict[emotion].append(np.float32(np.mean(centered_continuous_label, axis=0)))
+        centered_continuous_label_dict = self.label_ccc_centering()
+
 
         continuous_label_to_csv(
             self.root_directory, self.output_folder, centered_continuous_label_dict,
             self.dataset_info)
+
+    def create_npy_for_continuous_label(self):
+
+        pointer = 0
+        for i, folder in tqdm(enumerate(range(self.session_number))):
+            if self.dataset_info['having_continuous_label'][i]:
+                npy_directory = self.dataset_info['npy_output_folder'][i]
+                os.makedirs(npy_directory, exist_ok=True)
+                npy_filename_frame = os.path.join(npy_directory, "continuous_label.npy")
+                if not os.path.isfile(npy_filename_frame):
+                    continuous_label_length = self.dataset_info['refined_processed_length'][i]
+                    continuous_label = self.continuous_label_list[pointer][:continuous_label_length]
+
+                    with open(npy_filename_frame, 'wb') as f:
+                        np.save(f, continuous_label)
+
+                    pointer += 1
+                else:
+                    pointer += 1
 
 
 

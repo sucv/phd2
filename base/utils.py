@@ -45,7 +45,7 @@ def load_single_pkl(directory, filename=None, extension='.pkl'):
     if filename is not None:
         fullname = os.path.join(directory, filename + extension)
     else:
-        fullname = directory
+        fullname = directory if directory.endswith(".pkl") else directory + ".pkl"
 
     fullname = glob.glob(fullname)[0]
 

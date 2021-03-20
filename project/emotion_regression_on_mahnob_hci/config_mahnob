@@ -35,7 +35,7 @@
         "output_action_unit": "-aus",
         "output_image_flag": " -simalign ",
         "output_image_format": "-format_aligned jpg ",
-        "output_image_size": " -simsize 120 ",
+        "output_image_size": " -simsize 48 ",
         "output_filename_flag": " -of ",
         "output_directory_flag": " -out_dir ",
         "output_image_mask_flag": " -nomask "
