@@ -25,7 +25,7 @@ class Checkpointer(GenericCheckpointer):
             print("Checkpoint not exists, initialized one instead.")
             self.checkpoint = self.checkpoint
 
-    def save_checkpoint(self, epoch, path):
+    def save_checkpoint(self, epoch, parameter_controller, path):
         self.checkpoint['time_fit_start'] = self.trainer.time_fit_start
         self.checkpoint['start_epoch'] = epoch + 1
         self.checkpoint['early_stopping_counter'] = self.trainer.early_stopping_counter
@@ -36,7 +36,7 @@ class Checkpointer(GenericCheckpointer):
         self.checkpoint['csv_filename'] = self.trainer.csv_filename
         self.checkpoint['optimizer'] = self.trainer.optimizer
         self.checkpoint['scheduler'] = self.trainer.scheduler
-        self.checkpoint['param_control'] = self.trainer.parameter_control
+        self.checkpoint['param_control'] = parameter_controller
         self.checkpoint['current_model_weights'] = copy.deepcopy(self.trainer.model.state_dict())
         self.checkpoint['fit_finished'] = False
         self.checkpoint['fold_finished'] = False
@@ -116,7 +116,7 @@ class Checkpointer(GenericCheckpointer):
             self.trainer.current_model_weights = self.checkpoint['current_model_weights']
             self.trainer.optimizer = self.checkpoint['optimizer']
             self.trainer.scheduler = self.checkpoint['scheduler']
-            self.trainer.parameter_control = self.checkpoint['param_control']
+            self.trainer.parameter_controller = self.checkpoint['param_control']
             self.trainer.model.load_state_dict(self.trainer.current_model_weights)
         else:
             self.init_csv_logger()

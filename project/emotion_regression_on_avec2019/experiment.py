@@ -33,8 +33,6 @@ class Experiment(GenericExperiment):
         self.learning_rate = args.lr
         self.patience = args.p
         self.time_delay = args.d
-        self.model_load_path = args.model_load_path
-        self.model_save_path = args.model_save_path
 
         # if args.model_load_path == '':
         self.gpu = args.gpu
@@ -43,6 +41,10 @@ class Experiment(GenericExperiment):
         self.device = self.init_device()
 
         self.experiment()
+
+    def load_config(self):
+        from project.emotion_regression_on_avec2019.configs import avec2019_config as config
+        return config
 
     @staticmethod
     def get_train_emotion(option):
@@ -132,7 +134,7 @@ class Experiment(GenericExperiment):
         checkpoint_filename = os.path.join(directory_to_save_checkpoint_and_plot, "checkpoint.pkl")
 
         criterion = CCCLoss()
-        model = self.init_model("my_res50_fer+")
+        model = self.init_model("my_res50_fer+_try")
         dataloader_dict, length_dict = self.init_dataloader()
 
         milestone = [1000]
@@ -145,7 +147,11 @@ class Experiment(GenericExperiment):
         checkpoint_controller = Checkpointer(checkpoint_keys, checkpoint_filename, trainer)
         checkpoint_controller.load_checkpoint()
 
-        parameter_controller = ParamControl(trainer, release_count=8)
+        # If the checkpoint exists, then load the parameter controller from it.
+        # Otherwise, initialize a new one.
+        parameter_controller = checkpoint_controller.checkpoint['param_control']
+        if not checkpoint_controller.checkpoint['param_control']:
+            parameter_controller = ParamControl(trainer, release_count=8)
 
         trainer.fit(dataloader_dict, length_dict, num_epochs=200, early_stopping=50, min_num_epoch=0,
                     directory_to_save_checkpoint_and_plot=directory_to_save_checkpoint_and_plot, save_model=True,

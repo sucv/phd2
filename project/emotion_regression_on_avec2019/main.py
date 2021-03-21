@@ -17,7 +17,8 @@ if __name__ == '__main__':
     parser.add_argument('-p', type=int, help='Patience for learning rate changes', default=4)
     parser.add_argument('-gpu', type=int, help='Which gpu to use?', default=1)
     parser.add_argument('-cpu', type=int, help='How many threads are allowed?', default=1)
-    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='2345')
+    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='debug')
+    parser.add_argument('-hpc', help='On high-performance computing server or not?', default=False)
     parser.add_argument('-model_load_path', type=str, help='The path to load the trained model ',
                         default='/home/zhangsu/phd2/load')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', type=str, help='The path to save the trained model ',

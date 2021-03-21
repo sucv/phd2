@@ -13,11 +13,11 @@ class Flatten(Module):
 
 
 class my_res50(nn.Module):
-    def __init__(self, num_classes=8, use_pretrained=True, root_dir=''):
+    def __init__(self, num_classes=8, use_pretrained=True, state_dict_name='', root_dir='', mode="ir_se"):
         super().__init__()
-        self.backbone = Backbone(num_layers=50, drop_ratio=0.4, mode="ir_se")
+        self.backbone = Backbone(num_layers=50, drop_ratio=0.4, mode=mode)
         if use_pretrained:
-            path = os.path.join(root_dir, "model_ir_se50.pth")
+            path = os.path.join(root_dir, state_dict_name + ".pth")
             state_dict = torch.load(path, map_location='cpu')
             self.backbone.load_state_dict(state_dict)
 

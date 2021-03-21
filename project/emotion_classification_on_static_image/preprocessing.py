@@ -1,12 +1,11 @@
 from base.preprocessing import GenericImagePreprcessing, GenericImagePreprcessingForNFoldCV
 from base.facial_landmark import facial_image_crop_by_landmark
-from base.utils import load_single_pkl, load_single_csv, copy_file
+from base.utils import load_single_csv, copy_file
 from base.video import OpenFaceController
 
 import argparse
 import os
 import re
-import json
 from pathlib import Path
 from tqdm import tqdm
 
@@ -17,7 +16,7 @@ from PIL import Image
 
 class PreprocessingAffectNet(GenericImagePreprcessing):
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__()
         self.root_directory = config['local_root_directory']
         self.image_folder = config['local_image_folder']
         self.output_directory = config['local_output_directory']
@@ -38,8 +37,8 @@ class PreprocessingAffectNet(GenericImagePreprcessing):
         for label_csv_file in self.label_csv_list:
             partition = label_csv_file
 
-            csv_data = load_single_pkl(self.root_directory, label_csv_file, ".csv")
-            num_rows = len(csv_data.index)
+            csv_data = load_single_csv(self.root_directory, label_csv_file, ".csv")
+
             for index, data in csv_data.iterrows():
 
                 image_fullname = os.path.join(
@@ -72,7 +71,7 @@ class PreprocessingAffectNet(GenericImagePreprcessing):
 
 class PreprocessingRAFDB(GenericImagePreprcessing):
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__()
         self.root_directory = config['local_root_directory']
         self.image_folder = config['local_image_folder']
         self.output_directory = config['local_output_directory']
@@ -107,7 +106,7 @@ class PreprocessingRAFDB(GenericImagePreprcessing):
 
 class PreprocessingFER2013(GenericImagePreprcessing):
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__()
         self.root_directory = config['local_root_directory']
         self.root_csv_filename = config['root_csv_filename']
         self.output_directory = config['local_output_directory']
@@ -191,11 +190,11 @@ class PreprocessingFerPlus(PreprocessingFER2013):
 
 class PreprocessingCKplus(GenericImagePreprcessingForNFoldCV):
     def __init__(self, config):
-        super().__init__(config)
-        self.root_directory = config['root_directory']
+        super().__init__()
+        self.root_directory = config['local_root_directory']
         self.image_folder = config['image_folder']
         self.label_folder = config['label_folder']
-        self.output_directory = config['output_directory']
+        self.openface_output_folder = config['openface_output_folder']
         self.openface_config = config['openface_config']
 
 
@@ -217,7 +216,7 @@ class PreprocessingCKplus(GenericImagePreprcessingForNFoldCV):
             image_sequence_directory = self.get_image_sequence_directory(label_file)
 
             output_filename = emotion_category
-            output_directory = os.path.join(self.output_directory, subject_id)
+            output_directory = os.path.join(self.openface_output_folder, subject_id)
             os.makedirs(output_directory, exist_ok=True)
 
             openface = OpenFaceController(openface_path=self.openface_config['openface_directory'], output_directory=output_directory)
@@ -264,9 +263,9 @@ class PreprocessingCKplus(GenericImagePreprcessingForNFoldCV):
 
 class PreprocessingOuluCISIA(GenericImagePreprcessingForNFoldCV):
     def __init__(self, config):
-        super().__init__(config)
-        self.root_directory = config['root_directory']
-        self.output_directory = config['output_directory']
+        super().__init__()
+        self.root_directory = config['local_root_directory']
+        self.openface_output_folder = config['openface_output_folder']
         self.openface_config = config['openface_config']
         self.get_video_list()
         self.image_sequence_preprocessing()
@@ -282,7 +281,7 @@ class PreprocessingOuluCISIA(GenericImagePreprcessingForNFoldCV):
             subject_id = self.get_subject_id(file)
             emotion_category = self.get_expression_category(file)
             output_filename = emotion_category
-            output_directory = os.path.join(self.output_directory, subject_id)
+            output_directory = os.path.join(self.openface_output_folder, subject_id)
             os.makedirs(output_directory, exist_ok=True)
 
             openface = OpenFaceController(openface_path=self.openface_config['openface_directory'],
@@ -345,7 +344,7 @@ class PreprocessingRAFD(PreprocessingOuluCISIA):
         gaze = video_name.split(os.sep)[-1].split("_")[5].split(".avi")[0].capitalize()[:-4]
         return gaze
 
-    def video_preprocessing(self):
+    def image_sequence_preprocessing(self):
 
         video_list = self.get_video_list()
 
@@ -357,7 +356,7 @@ class PreprocessingRAFD(PreprocessingOuluCISIA):
             emotion_category = self.get_expression_category(file)
             gaze = self.get_gaze(file)
             output_filename = emotion_category + "_" + gaze
-            output_directory = os.path.join(self.output_directory, subject_id)
+            output_directory = os.path.join(self.openface_output_folder, subject_id)
             os.makedirs(output_directory, exist_ok=True)
 
             openface = OpenFaceController(openface_path=self.openface_config['openface_directory'],
@@ -381,25 +380,29 @@ class PreprocessingRAFD(PreprocessingOuluCISIA):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocessing of Emotion Classification Image Datasets.")
-    parser.add_argument("-d", help="Wchich dataset to preprocess? [affectnet, ck+, fer2013, fer+, rafd, rafdb, oulu]", default="fer+")
+    parser.add_argument("-d", help="Wchich dataset to preprocess? [affectnet, ck+, fer2013, fer+, rafd, rafdb, oulu]", default="rafd")
     args = parser.parse_args()
 
-    with open("configs/config_" + args.d) as config_file:
-        config = json.load(config_file)
-
     if args.d == "affectnet":
+        from project.emotion_classification_on_static_image.configs import config_affectnet as config
         pre = PreprocessingAffectNet(config=config)
     elif args.d == "ck+":
+        from project.emotion_classification_on_static_image.configs import config_ckplus as config
         pre = PreprocessingCKplus(config=config)
     elif args.d == "fer2013":
+        from project.emotion_classification_on_static_image.configs import config_fer2013 as config
         pre = PreprocessingFER2013(config=config)
     elif args.d == "fer+":
+        from project.emotion_classification_on_static_image.configs import config_ferplus as config
         pre = PreprocessingFerPlus(config=config)
     elif args.d == "rafd":
+        from project.emotion_classification_on_static_image.configs import config_rafd as config
         pre = PreprocessingRAFD(config=config)
     elif args.d == "rafdb":
+        from project.emotion_classification_on_static_image.configs import config_rafdb as config
         pre = PreprocessingRAFDB(config=config)
     elif args.d == "oulu":
+        from project.emotion_classification_on_static_image.configs import config_oulu as config
         pre = PreprocessingOuluCISIA(config=config)
     else:
         raise ValueError("Unknown dataset!")

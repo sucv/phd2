@@ -4,7 +4,21 @@ import glob
 import pickle
 import pandas as pd
 import cv2
+import numpy as np
 import torch
+from torch.utils.data import WeightedRandomSampler
+
+
+def init_weighted_sampler_and_weights(dataset):
+    class_sample_count = np.unique(dataset.targets, return_counts=True)[1]
+    weight = 1. / class_sample_count
+
+    samples_weight = weight[dataset.targets]
+    samples_weight = torch.from_numpy(samples_weight)
+
+    sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
+    return sampler, samples_weight
+
 
 def dict_combine(main_dict, new_dict):
     r"""

@@ -34,8 +34,7 @@ class ImageEmoClassificationNFoldArranger(object):
 
     @staticmethod
     def init_emotion_dict():
-        return {'Neutral': 0, 'Anger': 1, 'Contempt': 2, 'Disgust': 3,
-                'Fear': 4, 'Happiness': 5, 'Sad': 6, 'Surprise': 7}
+        raise NotImplementedError
 
     def establish_fold(self):
         fold_list = [[] for _ in range(self.num_folds)]
@@ -47,5 +46,4 @@ class ImageEmoClassificationNFoldArranger(object):
 
     @staticmethod
     def count_subject_for_each_fold():
-        num_subject_in_a_fold = [12, 12, 12, 12, 12, 12, 12, 12, 12, 10]
-        return num_subject_in_a_fold
+        raise NotImplementedError

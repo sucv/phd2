@@ -1,4 +1,19 @@
 import torch
+from torch import nn
+
+
+class FocalLoss(nn.Module):
+    def __init__(self, gamma = 2, eps = 1e-7):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.eps = eps
+        self.ce = nn.CrossEntropyLoss()
+
+    def forward(self, input, target):
+        logp = self.ce(input, target)
+        p = torch.exp(-logp)
+        loss = (1 - p) ** self.gamma * logp
+        return loss.mean()
 
 
 class CCCLoss(object):
@@ -14,3 +29,4 @@ class CCCLoss(object):
         ccc_loss = 1. - ccc
 
         return ccc_loss
+

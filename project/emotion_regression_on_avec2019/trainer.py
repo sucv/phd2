@@ -3,7 +3,7 @@ from base.output import ContinuousOutputHandlerNPY
 from base.metric import ContinuousMetricsCalculator
 from base.output import PlotHandler
 from project.emotion_regression_on_avec2019.parameter_control import ParamControl
-from base.utils import save_pkl_file
+
 
 import os
 import time
@@ -78,7 +78,6 @@ class AVEC2019Trainer(GenericTrainer):
 
         # parameter_control
         self.milestone = milestone
-        self.parameter_control = ParamControl(self)
 
         # For checkpoint
         self.time_fit_start = None
@@ -167,9 +166,10 @@ class AVEC2019Trainer(GenericTrainer):
 
         checkpoint_controller.read_checkpoint()
         checkpoint_controller.init_csv_logger()
+
         # Loop the epochs
         for epoch in np.arange(self.start_epoch, num_epochs):
-            if parameter_controller.get_current_lr() < 1e-7:
+            if parameter_controller.get_current_lr() < 1e-4:
             # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
                 parameter_controller.release_param()
 
@@ -266,7 +266,7 @@ class AVEC2019Trainer(GenericTrainer):
 
             self.scheduler.step(validate_ccc)
 
-            checkpoint_controller.save_checkpoint(epoch, directory_to_save_checkpoint_and_plot)
+            checkpoint_controller.save_checkpoint(epoch, parameter_controller, directory_to_save_checkpoint_and_plot)
 
         checkpoint_controller.checkpoint['fit_finished'] = True
         checkpoint_controller.save_checkpoint(num_epochs - 1, directory_to_save_checkpoint_and_plot)

@@ -11,19 +11,24 @@ import torch.cuda
 
 class GenericExperiment(object):
     def __init__(self, args):
+        self.args = args
         self.experiment_name = args.exp
+        self.model_load_path = args.model_load_path
+        self.model_save_path = args.model_save_path
         self.config = self.load_config()
         self.init_random_seed()
 
         # If None, it is usually for running on High-Performance Computing Server.
-        self.gpu = None
-        self.cpu = None
+        self.gpu = args.gpu
+        self.cpu = args.cpu
+        # If the code is to run on high-performance computer, which is usually not
+        # available to specify gpu index and cpu threads, then set them to none.
+        if self.args.hpc:
+            self.gpu = None
+            self.cpu = None
 
     def load_config(self):
-        # Load the config.
-        with open("config_" + self.experiment_name) as config_file:
-            config = json.load(config_file)
-        return config
+        raise NotImplementedError
 
     @staticmethod
     def init_random_seed():
@@ -35,11 +40,11 @@ class GenericExperiment(object):
 
     def init_device(self):
         device = detect_device()
-        if self.gpu is not None:
-            select_gpu(self.gpu)
 
-        if self.cpu is not None:
+        if not self.args.hpc:
+            select_gpu(self.gpu)
             set_cpu_thread(self.cpu)
+
         return device
 
     def init_model(self, **kwargs):
