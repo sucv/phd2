@@ -1,5 +1,6 @@
 import argparse
-from project.emotion_classification_on_static_image.experiment import Experiment
+import sys
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Say hello')
@@ -12,11 +13,17 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', type=int, help='Which gpu to use?', default=1)
     parser.add_argument('-cpu', type=int, help='How many threads are allowed?', default=1)
     parser.add_argument('-hpc', type=int, help='On high-performance computing server or not?', default=0)
+    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='1856')
+    parser.add_argument('-r', help='Resume from checkpoint?', default=False)
     parser.add_argument('-model_load_path', type=str, help='The path to load the trained model ',
                         default='/home/zhangsu/phd2/load')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', type=str, help='The path to save the trained model ',
                         default='/home/zhangsu/phd2/save')  # /scratch/users/ntu/su012/trained_model
+    parser.add_argument('-python_package_path', type=str, help='The path to load the trained model ',
+                        default='/home/zhangsu/phd2')  # /scratch/users/ntu/su012/pretrained_model
     args = parser.parse_args()
+    sys.path.insert(0, args.python_package_path)
+    from project.emotion_classification_on_static_image.experiment import Experiment
 
     experiment_handler = Experiment(args)
     experiment_handler.experiment()

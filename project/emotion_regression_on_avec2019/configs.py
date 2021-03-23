@@ -1,7 +1,7 @@
 frame_size = 48
 crop_size = 40
 window_length = 300
-hop_size = 100
+hop_size = 300
 
 avec2019_config = {
     "program_name": "avec2019",

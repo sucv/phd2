@@ -13,7 +13,7 @@ class Flatten(Module):
 
 
 class my_res50(nn.Module):
-    def __init__(self, num_classes=8, use_pretrained=True, state_dict_name='', root_dir='', mode="ir_se"):
+    def __init__(self, num_classes=8, use_pretrained=True, state_dict_name='', root_dir='', mode="ir"):
         super().__init__()
         self.backbone = Backbone(num_layers=50, drop_ratio=0.4, mode=mode)
         if use_pretrained:

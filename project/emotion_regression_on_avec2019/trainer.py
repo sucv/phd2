@@ -80,6 +80,7 @@ class AVEC2019Trainer(GenericTrainer):
         self.milestone = milestone
 
         # For checkpoint
+        self.resume = False
         self.time_fit_start = None
         self.csv_filename = None
         self.start_epoch = None
@@ -164,8 +165,6 @@ class AVEC2019Trainer(GenericTrainer):
             'ccc': -1e10
         }
 
-        checkpoint_controller.read_checkpoint()
-        checkpoint_controller.init_csv_logger()
 
         # Loop the epochs
         for epoch in np.arange(self.start_epoch, num_epochs):

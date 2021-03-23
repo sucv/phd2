@@ -129,12 +129,11 @@ class Experiment(GenericExperiment):
         # Load the checkpoint.
         checkpoint_keys = ['time_fit_start', 'csv_filename', 'start_epoch', 'early_stopping_counter', 'best_epoch_info',
                            'combined_train_record_dict', 'combined_validate_record_dict', 'train_losses',
-                           'validate_losses',
-                           'current_model_weights', 'optimizer', 'scheduler', 'param_control', 'fit_finished']
+                           'validate_losses', 'current_model', 'optimizer', 'scheduler', 'param_control', 'fit_finished']
         checkpoint_filename = os.path.join(directory_to_save_checkpoint_and_plot, "checkpoint.pkl")
 
         criterion = CCCLoss()
-        model = self.init_model("my_res50_fer+_try")
+        model = self.init_model("state_dict_0.878")
         dataloader_dict, length_dict = self.init_dataloader()
 
         milestone = [1000]
@@ -144,14 +143,14 @@ class Experiment(GenericExperiment):
                                   emotional_dimension=self.emotion_dimension, head=self.head,
                                   milestone=milestone, criterion=criterion, verbose=True, device=self.device)
 
-        checkpoint_controller = Checkpointer(checkpoint_keys, checkpoint_filename, trainer)
-        checkpoint_controller.load_checkpoint()
+        parameter_controller = ParamControl(trainer, release_count=8)
 
-        # If the checkpoint exists, then load the parameter controller from it.
-        # Otherwise, initialize a new one.
-        parameter_controller = checkpoint_controller.checkpoint['param_control']
-        if not checkpoint_controller.checkpoint['param_control']:
-            parameter_controller = ParamControl(trainer, release_count=8)
+        checkpoint_controller = Checkpointer(checkpoint_keys, checkpoint_filename, trainer, parameter_controller, resume=self.resume)
+
+        if self.resume:
+            trainer, parameter_controller = checkpoint_controller.load_checkpoint()
+        else:
+            checkpoint_controller.init_csv_logger()
 
         trainer.fit(dataloader_dict, length_dict, num_epochs=200, early_stopping=50, min_num_epoch=0,
                     directory_to_save_checkpoint_and_plot=directory_to_save_checkpoint_and_plot, save_model=True,

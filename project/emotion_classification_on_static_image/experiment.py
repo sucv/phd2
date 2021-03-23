@@ -3,6 +3,7 @@ from base.utils import init_weighted_sampler_and_weights
 from base.loss_function import FocalLoss
 from project.emotion_classification_on_static_image.dataset import CKplusArranger, OuluArranger, RafdArranger, \
     EmotionalStaticImgClassificationDataset
+from project.emotion_classification_on_static_image.checkpointer import Checkpointer
 from project.emotion_classification_on_static_image.trainer import ImageClassificationTrainer
 from project.emotion_classification_on_static_image.parameter_control import ParamControl
 from models.model import my_res50
@@ -10,16 +11,17 @@ from models.model import my_res50
 import os
 from operator import itemgetter
 
+import torch
 from torch.utils import data
 from torchvision.datasets import ImageFolder
-from torchvision.transforms import Compose, Resize, RandomHorizontalFlip, RandomCrop, CenterCrop, ToTensor, Normalize
+from torchvision.transforms import Compose, Resize, RandomHorizontalFlip, RandomCrop, CenterCrop, RandomAffine, ColorJitter, ToTensor, Normalize
 import numpy as np
 
 
 class Experiment(GenericExperiment):
     def __init__(self, args):
         super().__init__(args)
-
+        self.stamp = args.s
         self.num_folds = args.n_fold
         if args.fold_to_run is None:
             self.fold_to_run = np.arange(0, self.num_folds)
@@ -68,8 +70,8 @@ class Experiment(GenericExperiment):
         transform = []
         transform.append(Resize(self.config['resize']))
         transform.append(RandomCrop(self.config['center_crop']))
-        # transform.append(T.ColorJitter())
-        # transform.append(T.RandomAffine(degrees=10))
+        transform.append(ColorJitter())
+        transform.append(RandomAffine(degrees=10))
         transform.append(RandomHorizontalFlip())
         transform.append(ToTensor())
         transform.append(Normalize(mean=self.config['mean'], std=self.config['std']))
@@ -143,6 +145,9 @@ class Experiment(GenericExperiment):
         device = self.init_device()
         fold_list_origin = None
 
+        directory_to_save_trained_model_and_csv = os.path.join(self.model_save_path,
+                                                             self.model_name + "_" + self.stamp)
+
         if self.cross_validation:
             arranger = self.init_arranger()
             fold_list_origin = arranger.establish_fold()
@@ -150,7 +155,7 @@ class Experiment(GenericExperiment):
         transform_dict = self.init_transform()
 
         for fold in iter(self.fold_to_run):
-
+            directory_to_save_trained_model_and_csv = os.path.join(directory_to_save_trained_model_and_csv, str(fold))
             model = self.init_model()
             dataloader_dict, samples_weights = self.init_dataloader(transform_dict=transform_dict, fold=fold,
                                                                     fold_list_origin=fold_list_origin)
@@ -158,15 +163,22 @@ class Experiment(GenericExperiment):
             milestone = [0]
             criterion = FocalLoss()
 
-            trainer = ImageClassificationTrainer(model, model_name=self.model_name, criterion=criterion,
+            checkpoint_keys = []
+            trainer = ImageClassificationTrainer(model, model_name=self.model_name, model_path=directory_to_save_trained_model_and_csv, criterion=criterion,
                                                  num_classes=self.config['num_classes'], device=device,
-                                                 fold=fold, milestone=milestone, patience=10,
+                                                 fold=fold, milestone=milestone, patience=5,
                                                  samples_weight=samples_weights)
 
-            parameter_controller = ParamControl(trainer, release_count=7)
-            trainer.fit(dataloader_dict, num_epochs=2000, early_stopping=500, topk_accuracy=1,
-                        min_num_epoch=0, parameter_controller=parameter_controller,
+
+
+            parameter_controller = ParamControl(trainer, release_count=3)
+            checkpoint_controller = Checkpointer(checkpoint_keys, path='', trainer=trainer, parameter_controller=parameter_controller, resume=False)
+            trainer.fit(dataloader_dict, num_epochs=500, early_stopping=100, topk_accuracy=1,
+                        min_num_epoch=0, parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller,
                         save_model=True)
 
-            test_loss, test_acc = trainer.validate(dataloader_dict['test'], topk_accuracy=1)
-            print("The test accuracy on fold {} is {}".format(str(fold), str(test_acc)))
+            # path = os.path.join(directory_to_save_trained_model_and_csv, "state_dict" + ".pth")
+            # state_dict = torch.load(path, map_location='cpu')
+            # model.load_state_dict(state_dict['net_state_dict'])
+            # test_loss, test_acc = trainer.validate(dataloader_dict['test'], topk_accuracy=1)
+            # print("The test accuracy on fold {} is {}".format(str(fold), str(test_acc)))

@@ -16,7 +16,7 @@ def init_weighted_sampler_and_weights(dataset):
     samples_weight = weight[dataset.targets]
     samples_weight = torch.from_numpy(samples_weight)
 
-    sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
+    sampler = WeightedRandomSampler(weights=samples_weight.type('torch.DoubleTensor'), num_samples=len(samples_weight))
     return sampler, samples_weight
 
 

@@ -9,8 +9,8 @@ import pandas as pd
 
 
 class Checkpointer(GenericCheckpointer):
-    def __init__(self, keys, path, trainer):
-        super().__init__(keys, path, trainer)
+    def __init__(self, keys, path, trainer, parameter_controller, resume):
+        super().__init__(keys, path, trainer, parameter_controller, resume)
         self.columns = []
 
     def load_checkpoint(self):
@@ -21,9 +21,25 @@ class Checkpointer(GenericCheckpointer):
             print("Checkpoint loaded!")
             print("Fitting completed?", str(self.checkpoint['fit_finished']))
             print("Start epoch:", str(self.checkpoint['start_epoch']))
+
+            self.trainer.resume = True
+            self.trainer.time_fit_start = self.checkpoint['time_fit_start']
+            self.trainer.csv_filename = self.checkpoint['csv_filename']
+            self.trainer.start_epoch = self.checkpoint['start_epoch']
+            self.trainer.early_stopping_counter = self.checkpoint['early_stopping_counter']
+            self.trainer.best_epoch_info = self.checkpoint['best_epoch_info']
+            self.trainer.combined_train_record_dict = self.checkpoint['combined_record_dict']['train']
+            self.trainer.combined_validate_record_dict = self.checkpoint['combined_record_dict']['validate']
+            self.trainer.train_losses = self.checkpoint['train_losses']
+            self.trainer.validate_losses = self.checkpoint['validate_losses']
+            self.trainer.model = self.checkpoint['current_model']
+            self.trainer.optimizer = self.checkpoint['optimizer']
+            self.trainer.scheduler = self.checkpoint['scheduler']
+            self.parameter_controller = self.checkpoint['param_control']
+            self.parameter_controller.trainer = self.trainer
         else:
-            print("Checkpoint not exists, initialized one instead.")
-            self.checkpoint = self.checkpoint
+            raise ValueError("Checkpoint not exists!!")
+        return self.trainer, self.parameter_controller
 
     def save_checkpoint(self, epoch, parameter_controller, path):
         self.checkpoint['time_fit_start'] = self.trainer.time_fit_start
@@ -36,10 +52,14 @@ class Checkpointer(GenericCheckpointer):
         self.checkpoint['csv_filename'] = self.trainer.csv_filename
         self.checkpoint['optimizer'] = self.trainer.optimizer
         self.checkpoint['scheduler'] = self.trainer.scheduler
-        self.checkpoint['param_control'] = parameter_controller
-        self.checkpoint['current_model_weights'] = copy.deepcopy(self.trainer.model.state_dict())
+        self.checkpoint['current_model'] = self.trainer.model
         self.checkpoint['fit_finished'] = False
         self.checkpoint['fold_finished'] = False
+
+        self.checkpoint['param_control'] = parameter_controller
+        # self.checkpoint['release_count'] = parameter_controller.release_count
+        # self.checkpoint['module_list'] = parameter_controller.module_list
+        # self.checkpoint['module_stack'] = parameter_controller.module_stack
 
         if path:
             print("Saving checkpoint.")
@@ -82,7 +102,7 @@ class Checkpointer(GenericCheckpointer):
         row_df.T.to_csv(self.trainer.csv_filename, mode='a', index=False, header=False)
 
     def init_csv_logger(self):
-        self.columns = ['time', 'epoch', 'best_epoch', 'layer_to_update', 'lr', 'plateau_count',
+        self.columns = ['time', 'epoch', 'best_epoch', 'layer_to_update', 'lr',
                         'tr_loss', 'val_loss']
 
         if self.trainer.head == "single-headed":
@@ -102,21 +122,4 @@ class Checkpointer(GenericCheckpointer):
         self.trainer.csv_filename = self.trainer.model_path[:-4] + ".csv"
         df.to_csv(self.trainer.csv_filename, index=False)
 
-    def read_checkpoint(self):
-        if self.checkpoint['current_model_weights']:
-            self.trainer.time_fit_start = self.checkpoint['time_fit_start']
-            self.trainer.csv_filename = self.checkpoint['csv_filename']
-            self.trainer.start_epoch = self.checkpoint['start_epoch']
-            self.trainer.early_stopping_counter = self.checkpoint['early_stopping_counter']
-            self.trainer.best_epoch_info = self.checkpoint['best_epoch_info']
-            self.trainer.combined_train_record_dict = self.checkpoint['combined_train_record_dict']
-            self.trainer.combined_validate_record_dict = self.checkpoint['combined_validate_record_dict']
-            self.trainer.train_losses = self.checkpoint['train_losses']
-            self.trainer.validate_losses = self.checkpoint['validate_losses']
-            self.trainer.current_model_weights = self.checkpoint['current_model_weights']
-            self.trainer.optimizer = self.checkpoint['optimizer']
-            self.trainer.scheduler = self.checkpoint['scheduler']
-            self.trainer.parameter_controller = self.checkpoint['param_control']
-            self.trainer.model.load_state_dict(self.trainer.current_model_weights)
-        else:
-            self.init_csv_logger()
+

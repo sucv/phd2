@@ -1,7 +1,5 @@
 import sys
 
-sys.path.insert(0, r'/home/zhangsu/phd2/')
-from project.emotion_regression_on_avec2019.experiment import Experiment
 import argparse
 
 if __name__ == '__main__':
@@ -15,15 +13,21 @@ if __name__ == '__main__':
     parser.add_argument('-lr', type=float, help='The initial learning rate.', default=1e-5)
     parser.add_argument('-d', type=float, help='Time delay between input and label, in seconds', default=0)
     parser.add_argument('-p', type=int, help='Patience for learning rate changes', default=4)
-    parser.add_argument('-gpu', type=int, help='Which gpu to use?', default=1)
+    parser.add_argument('-gpu', type=int, help='Which gpu to use?', default=0)
     parser.add_argument('-cpu', type=int, help='How many threads are allowed?', default=1)
-    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='debug')
+    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='1823')
+    parser.add_argument('-r', help='Resume from checkpoint?', default=True)
     parser.add_argument('-hpc', help='On high-performance computing server or not?', default=False)
     parser.add_argument('-model_load_path', type=str, help='The path to load the trained model ',
                         default='/home/zhangsu/phd2/load')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', type=str, help='The path to save the trained model ',
                         default='/home/zhangsu/phd2/save')  # /scratch/users/ntu/su012/trained_model
+    parser.add_argument('-python_package_path', type=str, help='The path to load the trained model ',
+                        default='/home/zhangsu/phd2')  # /scratch/users/ntu/su012/pretrained_model
+
     args = parser.parse_args()
+    sys.path.insert(0, args.python_package_path)
+    from project.emotion_regression_on_avec2019.experiment import Experiment
 
     experiment_handler = Experiment(args)
     experiment_handler.experiment()

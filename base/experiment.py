@@ -15,6 +15,7 @@ class GenericExperiment(object):
         self.experiment_name = args.exp
         self.model_load_path = args.model_load_path
         self.model_save_path = args.model_save_path
+        self.resume = args.r
         self.config = self.load_config()
         self.init_random_seed()
 
