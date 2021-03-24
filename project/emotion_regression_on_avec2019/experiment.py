@@ -28,19 +28,13 @@ class Experiment(GenericExperiment):
             self.head = "multi-headed"
             self.emotion_dimension = ["Arousal", "Valence"]
 
-        self.model_name = "avec2019_" + args.m + "_" + self.train_emotion
+        self.model_name = self.experiment_name + "_" + args.m + "_" + self.train_emotion
 
         self.learning_rate = args.lr
         self.patience = args.p
         self.time_delay = args.d
 
-        # if args.model_load_path == '':
-        self.gpu = args.gpu
-        self.cpu = args.cpu
-
         self.device = self.init_device()
-
-        self.experiment()
 
     def load_config(self):
         from project.emotion_regression_on_avec2019.configs import avec2019_config as config
@@ -121,37 +115,28 @@ class Experiment(GenericExperiment):
 
     def experiment(self):
 
-        directory_to_save_checkpoint_and_plot = os.path.join("load", self.model_name + "_" + self.stamp)
-        if self.model_save_path:
-            directory_to_save_checkpoint_and_plot = os.path.join(self.model_save_path,
-                                                                 self.model_name + "_" + self.stamp)
+        save_path = os.path.join(self.model_save_path, self.experiment_name + "_" + self.model_name + "_" + self.stamp)
+        checkpoint_filename = os.path.join(save_path, "checkpoint.pkl")
 
-        # Load the checkpoint.
-        checkpoint_keys = ['time_fit_start', 'csv_filename', 'start_epoch', 'early_stopping_counter', 'best_epoch_info',
-                           'combined_train_record_dict', 'combined_validate_record_dict', 'train_losses',
-                           'validate_losses', 'current_model', 'optimizer', 'scheduler', 'param_control', 'fit_finished']
-        checkpoint_filename = os.path.join(directory_to_save_checkpoint_and_plot, "checkpoint.pkl")
-
-        criterion = CCCLoss()
-        model = self.init_model("state_dict_0.878")
+        model = self.init_model("state_dict_0.881")
         dataloader_dict, length_dict = self.init_dataloader()
+        criterion = CCCLoss()
 
         milestone = [1000]
         trainer = AVEC2019Trainer(model, stamp=self.stamp, model_name=self.model_name, learning_rate=self.learning_rate,
-                                  metrics=self.config['metrics'], model_path=self.model_save_path,
+                                  metrics=self.config['metrics'], save_path=save_path, early_stopping=20,
                                   train_emotion=self.train_emotion, patience=self.patience,
                                   emotional_dimension=self.emotion_dimension, head=self.head,
                                   milestone=milestone, criterion=criterion, verbose=True, device=self.device)
 
         parameter_controller = ParamControl(trainer, release_count=8)
 
-        checkpoint_controller = Checkpointer(checkpoint_keys, checkpoint_filename, trainer, parameter_controller, resume=self.resume)
+        checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 
         if self.resume:
             trainer, parameter_controller = checkpoint_controller.load_checkpoint()
         else:
             checkpoint_controller.init_csv_logger()
 
-        trainer.fit(dataloader_dict, length_dict, num_epochs=200, early_stopping=50, min_num_epoch=0,
-                    directory_to_save_checkpoint_and_plot=directory_to_save_checkpoint_and_plot, save_model=True,
+        trainer.fit(dataloader_dict, length_dict, num_epochs=200, min_num_epoch=0, save_model=True,
                     parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)

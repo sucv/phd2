@@ -8,20 +8,21 @@ import time
 import copy
 from tqdm import tqdm
 
+import pandas as pd
 import numpy as np
 import torch
-from torch import nn, optim
-import torch.utils.data
+from torch import optim
 
 
-class AVEC2019Trainer(GenericTrainer):
-    def __init__(self, model, model_name='2d1d', save_path=None, train_emotion='both', head='multi-headed',
-                 early_stopping=100, criterion=None, milestone=[0], patience=10, learning_rate=0.00001, device='cpu',
-                 emotional_dimension=None, metrics=None, verbose=False, print_training_metric=False, **kwargs):
+class MAHNOBRegressionTrainer(GenericTrainer):
+    def __init__(self, model, n_fold=10, folds_to_run=0, model_name='2d1d', save_path=None, max_epoch=100,
+                 early_stopping=30, criterion=None, milestone=[0], patience=10, learning_rate=0.00001, device='cpu',
+                 emotional_dimension=['Valence'], metrics=None, verbose=False, print_training_metric=False, **kwargs):
 
         # The device to use.
-        super().__init__(model, model_name, save_path, criterion, learning_rate, early_stopping, device, patience,
-                         verbose, **kwargs)
+        super().__init__(model, model_name, save_path, criterion, learning_rate, early_stopping, device, max_epoch,
+                         patience, verbose, **kwargs)
+
         self.device = device
 
         # Whether to show the information strings.
@@ -32,8 +33,6 @@ class AVEC2019Trainer(GenericTrainer):
 
         # What emotional dimensions to consider.
         self.emotional_dimension = emotional_dimension
-        self.train_emotion = train_emotion
-        self.head = head
 
         self.metrics = metrics
 
@@ -53,6 +52,7 @@ class AVEC2019Trainer(GenericTrainer):
 
         # For checkpoint
         self.fit_finished = False
+        self.fold_finished = False
         self.resume = False
         self.time_fit_start = None
         self.combined_record_dict = {'train': {}, 'validate': {}}
@@ -84,15 +84,11 @@ class AVEC2019Trainer(GenericTrainer):
 
     def train(self, data_loader, length_to_track, epoch):
         self.model.train()
-        loss, result_dict = self.loop(data_loader, length_to_track, epoch,
-                                      train_mode=True)
-        return loss, result_dict
+        return self.loop(data_loader, length_to_track, epoch, train_mode=True)
 
     def validate(self, data_loader, length_to_track, epoch):
-        with torch.no_grad():
-            self.model.eval()
-            loss, result_dict = self.loop(data_loader, length_to_track, epoch, train_mode=False)
-        return loss, result_dict
+        self.model.eval()
+        return self.loop(data_loader, length_to_track, epoch, train_mode=False)
 
     def fit(
             self,
@@ -126,6 +122,7 @@ class AVEC2019Trainer(GenericTrainer):
 
         self.time_fit_start = time.time()
         start_epoch = self.start_epoch
+
         self.best_epoch_info = {
             'model_weights': copy.deepcopy(self.model.state_dict()),
             'loss': 1e10,
@@ -134,12 +131,11 @@ class AVEC2019Trainer(GenericTrainer):
 
         # Loop the epochs
         for epoch in np.arange(start_epoch, num_epochs):
-            if parameter_controller.get_current_lr() < 1e-4:
+            if parameter_controller.get_current_lr() < 1e-6:
             # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
                 parameter_controller.release_param()
 
             time_epoch_start = time.time()
-
             print("There are {} layers to update.".format(len(self.optimizer.param_groups[0]['params'])))
 
             # Get the losses and the record dictionaries for training and validation.
@@ -159,23 +155,15 @@ class AVEC2019Trainer(GenericTrainer):
 
             improvement = False
 
-            if self.train_emotion == "both":
-                validate_ccc = np.mean(
-                    [validate_record_dict['overall'][emotion]['ccc'] for emotion in self.emotional_dimension])
-            elif self.train_emotion == "arousal":
-                validate_ccc = np.mean(validate_record_dict['overall']['Arousal']['ccc'])
-            elif self.train_emotion == "valence":
-                validate_ccc = np.mean(validate_record_dict['overall']['Valence']['ccc'])
-            else:
-                raise ValueError("Unknown emotion dimension!")
+            validate_ccc = np.mean(validate_record_dict['overall']['Valence']['ccc'])
 
             # If a lower validate loss appears.
             if validate_ccc > self.best_epoch_info['ccc']:
                 if save_model:
-                    torch.save(self.model.state_dict(), os.path.join(self.save_path, "model_state_dict.pth"))
+                    torch.save(self.model.state_dict(), self.save_path)
 
                 improvement = True
-                self.best_epoch_info = {
+                best_epoch_info = {
                     'model_weights': copy.deepcopy(self.model.state_dict()),
                     'loss': validate_loss,
                     'ccc': validate_ccc,
@@ -208,7 +196,7 @@ class AVEC2019Trainer(GenericTrainer):
 
             if self.verbose:
                 print(
-                    "\n Epoch {:2} in {:.0f}s || Train loss={:.3f} | Val loss={:.3f} | LR={:.1e} | Release_count={} | best={} | "
+                    "\n Epoch {:2} in {:.0f}s || Train loss={:.3f} | Val loss={:.3f} | LR={:.1e}  | Release_count={} | best={} | "
                     "improvement={}-{}".format(
                         epoch + 1,
                         time.time() - time_epoch_start,
@@ -228,13 +216,16 @@ class AVEC2019Trainer(GenericTrainer):
                 epoch, train_record_dict['overall'], validate_record_dict['overall'])
 
             self.scheduler.step(validate_ccc)
+            # if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            #     self.scheduler.step(validate_loss)
+            # else:
+            #     self.scheduler.step()
 
             self.start_epoch = epoch + 1
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
         self.fit_finished = True
         checkpoint_controller.save_checkpoint(self, self.save_path)
-
         self.model.load_state_dict(self.best_epoch_info['model_weights'])
 
         if save_model:
@@ -251,38 +242,27 @@ class AVEC2019Trainer(GenericTrainer):
         metric_handler = ContinuousMetricsCalculator(self.metrics, self.emotional_dimension,
                                                      output_handler, continuous_label_handler)
         total_batch_counter = 0
-        for batch_index, (X, Y, indices, sessions) in tqdm(enumerate(data_loader), total=len(data_loader)):
+        for batch_index, (X, Y, absolute_indices, sessions) in tqdm(enumerate(data_loader), total=len(data_loader)):
+
+
             total_batch_counter += len(sessions)
 
             inputs = X.to(self.device)
-            labels = Y.float().to(self.device)
+
+            labels = torch.squeeze(Y.float().to(self.device), dim=2)
 
             # Determine the weight for loss function
             if train_mode:
-                loss_weights = torch.ones_like(labels).to(self.device)
+                loss_weights = torch.ones([labels.shape[0], labels.shape[1], 1]).to(self.device)
                 self.optimizer.zero_grad()
-
-                if self.head == "multi-headed":
-                    if self.train_emotion == "both":
-                        loss_weights[:, :, 0] *= 0.5
-                        loss_weights[:, :, 1] *= 0.5
-                    elif self.train_emotion == "arousal":
-                        loss_weights[:, :, 0] *= 0.7
-                        loss_weights[:, :, 1] *= 0.3
-                    elif self.train_emotion == "valence":
-                        loss_weights[:, :, 0] *= 0.7
-                        loss_weights[:, :, 1] *= 0.3
-                    else:
-                        raise ValueError("Unknown emotion dimention to train!")
 
             outputs = self.model(inputs)
 
-            output_handler.place_clip_output_to_subjectwise_dict(outputs.detach().cpu().numpy(), indices, sessions)
-            continuous_label_handler.place_clip_output_to_subjectwise_dict(labels.detach().cpu().numpy(), indices,
-                                                                           sessions)
-            loss = self.criterion(outputs, labels)
+            output_handler.place_clip_output_to_subjectwise_dict(outputs.detach().cpu().numpy(), absolute_indices, sessions)
+            continuous_label_handler.place_clip_output_to_subjectwise_dict(labels.detach().cpu().numpy()[:, :, np.newaxis], absolute_indices, sessions)
+            loss = self.criterion(outputs, labels.unsqueeze(2)) * outputs.size(0)
 
-            running_loss += loss.mean().item() * outputs.size(0)
+            running_loss += loss.mean().item()
 
             if train_mode:
                 loss.backward(loss_weights, retain_graph=True)

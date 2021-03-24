@@ -14,22 +14,23 @@ from sklearn.metrics import accuracy_score
 
 
 class ImageClassificationTrainer(GenericTrainer):
-    def __init__(self, model, model_name='', model_path='', milestone=[0], fold=0, max_epoch=2000,
-                 criterion=None, learning_rate=0.001, device='cpu', num_classes=6, patience=20,
-                 verbose=True, **kwargs):
-        super().__init__(model, model_name, model_path, criterion, learning_rate, device, num_classes,
-                         max_epoch, patience, verbose, **kwargs)
+    def __init__(self, model, model_name='', save_path='', milestone=[0], fold=0, max_epoch=2000,
+                 criterion=None, learning_rate=0.001, device='cpu', num_classes=6, patience=20, early_stopping=100,
+                 verbose=True, min_learning_rate=1e-5, **kwargs):
+        super().__init__(model, model_name=model_name, save_path=save_path, criterion=criterion, min_learning_rate=min_learning_rate,
+                         learning_rate=learning_rate, device=device, num_classes=num_classes, early_stopping=early_stopping,
+                         max_epoch=max_epoch, patience=patience, verbose=verbose, **kwargs)
 
         # The networks.
-        self.model_path = model_path
-        os.makedirs(self.model_path, exist_ok=True)
-        self.model_path = os.path.join(self.model_path, "state_dict.pth")
+        self.save_path = save_path
+        os.makedirs(self.save_path, exist_ok=True)
 
         self.fold = fold
-
-        # parameter_control
         self.milestone = milestone
 
+        # parameter_control
+        self.fit_finished = False
+        self.resume = False
         self.train_losses = []
         self.validate_losses = []
         self.train_accuracies = []
@@ -65,15 +66,11 @@ class ImageClassificationTrainer(GenericTrainer):
             epoch_loss, epoch_acc = self.loop(data_loader, train_mode=False, topk_accuracy=topk_accuracy)
         return epoch_loss, epoch_acc
 
-    def fit(self, dataloaders_dict, num_epochs=10, early_stopping=5, topk_accuracy=1, min_num_epoch=0,
+    def fit(self, dataloaders_dict, num_epochs=10,  topk_accuracy=1, min_num_epoch=0,
             parameter_controller=None, checkpoint_controller=None, save_model=False):
         if self.verbose:
             print("-------")
             print("Starting training, on device:", self.device)
-
-        time_fit_start = time.time()
-        train_losses, validate_losses, train_accuracies, validate_accuracies = [], [], [], []
-        early_stopping_counter = early_stopping
 
         self.best_epoch_info = {
             'model_weights': copy.deepcopy(self.model.state_dict()),
@@ -81,12 +78,13 @@ class ImageClassificationTrainer(GenericTrainer):
             'acc': 0,
         }
 
-        checkpoint_controller.init_csv_logger()
+        start_epoch = self.start_epoch
 
-        for epoch in range(num_epochs):
+        for epoch in np.arange(start_epoch, num_epochs):
+
             time_epoch_start = time.time()
 
-            if epoch == 0 or parameter_controller.get_current_lr() < 1e-4:
+            if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
                 # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
                 parameter_controller.release_param()
                 self.model.load_state_dict(self.best_epoch_info['model_weights'])
@@ -116,14 +114,17 @@ class ImageClassificationTrainer(GenericTrainer):
                         'val_acc': validate_acc,
                     }
                 }
+                current_save_path = os.path.join(self.save_path, "model_state_dict" + "_" + str(self.best_epoch_info['acc']) + ".pth")
+                if save_model:
+                    torch.save(self.model.state_dict(), current_save_path)
 
-            if early_stopping and epoch > min_num_epoch:
+            if self.early_stopping and epoch > min_num_epoch:
                 if improvement:
-                    early_stopping_counter = early_stopping
+                    self.early_stopping_counter = self.early_stopping
                 else:
-                    early_stopping_counter -= 1
+                    self.early_stopping_counter -= 1
 
-                if early_stopping_counter <= 0:
+                if self.early_stopping_counter <= 0:
                     if self.verbose:
                         print("\nEarly Stop!\n")
                     break
@@ -147,18 +148,20 @@ class ImageClassificationTrainer(GenericTrainer):
                         self.best_epoch_info['acc'],
                         parameter_controller.release_count,
                         improvement,
-                        early_stopping_counter)
+                        self.early_stopping_counter)
                 )
 
             checkpoint_controller.save_log_to_csv(epoch)
 
             self.scheduler.step(validate_acc)
 
-            # self.model.load_state_dict(best_epoch_info['model_weights'])
+            self.start_epoch = epoch + 1
+            checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
-            if save_model:
-                current_save_path = self.model_path[:-4] + "_" + str(self.best_epoch_info['acc']) + ".pth"
-                torch.save(self.best_epoch_info['model_weights'], current_save_path)
+            self.model.load_state_dict(self.best_epoch_info['model_weights'])
+
+        self.fit_finished = True
+        checkpoint_controller.save_checkpoint(self, self.save_path)
 
     def loop(self, data_loader, train_mode=True, topk_accuracy=1):
 

@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', type=int, help='Which gpu to use?', default=1)
     parser.add_argument('-cpu', type=int, help='How many threads are allowed?', default=1)
     parser.add_argument('-hpc', type=int, help='On high-performance computing server or not?', default=0)
-    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='1856')
+    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='1736')
     parser.add_argument('-r', help='Resume from checkpoint?', default=False)
     parser.add_argument('-model_load_path', type=str, help='The path to load the trained model ',
                         default='/home/zhangsu/phd2/load')  # /scratch/users/ntu/su012/pretrained_model

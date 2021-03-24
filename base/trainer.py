@@ -7,9 +7,11 @@ class GenericTrainer(object):
     def __init__(self,
                  model,
                  model_name="my_net",
-                 model_path='',
+                 save_path='',
                  criterion=None,
                  learning_rate=0.0001,
+                 min_learning_rate=1e-5,
+                 early_stopping=100,
                  device='cpu',
                  num_classes=2,
                  max_epoch=1000,
@@ -20,12 +22,15 @@ class GenericTrainer(object):
         self.device = device
         self.model = model.to(device)
         self.model_name = model_name
-        self.model_path = model_path
+        self.save_path = save_path
 
         self.num_classes = num_classes
         self.max_epoch = max_epoch
-
+        self.start_epoch = 0
+        self.early_stopping = early_stopping
+        self.early_stopping_counter = self.early_stopping
         self.learning_rate = learning_rate
+        self.min_learning_rate = min_learning_rate
         self.patience = patience
         self.criterion = criterion
         self.init_optimizer_and_scheduler()

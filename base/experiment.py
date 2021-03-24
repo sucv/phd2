@@ -1,6 +1,5 @@
 from base.utils import detect_device, select_gpu, set_cpu_thread
 
-import json
 import random
 
 import numpy as np

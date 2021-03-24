@@ -145,8 +145,7 @@ class Experiment(GenericExperiment):
         device = self.init_device()
         fold_list_origin = None
 
-        directory_to_save_trained_model_and_csv = os.path.join(self.model_save_path,
-                                                             self.model_name + "_" + self.stamp)
+        save_path = os.path.join(self.model_save_path, self.model_name + "_" + self.stamp)
 
         if self.cross_validation:
             arranger = self.init_arranger()
@@ -155,27 +154,30 @@ class Experiment(GenericExperiment):
         transform_dict = self.init_transform()
 
         for fold in iter(self.fold_to_run):
-            directory_to_save_trained_model_and_csv = os.path.join(directory_to_save_trained_model_and_csv, str(fold))
-            model = self.init_model()
+            fold_save_path = os.path.join(save_path, str(fold))
+            checkpoint_filename = os.path.join(fold_save_path, "checkpoint.pkl")
+
             dataloader_dict, samples_weights = self.init_dataloader(transform_dict=transform_dict, fold=fold,
                                                                     fold_list_origin=fold_list_origin)
-
-            milestone = [0]
+            model = self.init_model()
             criterion = FocalLoss()
+            milestone = [0]
 
-            checkpoint_keys = []
-            trainer = ImageClassificationTrainer(model, model_name=self.model_name, model_path=directory_to_save_trained_model_and_csv, criterion=criterion,
-                                                 num_classes=self.config['num_classes'], device=device,
-                                                 fold=fold, milestone=milestone, patience=5,
+            trainer = ImageClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path, criterion=criterion,
+                                                 num_classes=self.config['num_classes'], device=device, learning_rate=1e-3,
+                                                 fold=fold, milestone=milestone, patience=20, early_stopping=100, min_learning_rate=1e-5,
                                                  samples_weight=samples_weights)
 
-
-
             parameter_controller = ParamControl(trainer, release_count=3)
-            checkpoint_controller = Checkpointer(checkpoint_keys, path='', trainer=trainer, parameter_controller=parameter_controller, resume=False)
-            trainer.fit(dataloader_dict, num_epochs=500, early_stopping=100, topk_accuracy=1,
-                        min_num_epoch=0, parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller,
-                        save_model=True)
+            checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
+
+            if self.resume:
+                trainer, parameter_controller = checkpoint_controller.load_checkpoint()
+            else:
+                checkpoint_controller.init_csv_logger()
+
+            trainer.fit(dataloader_dict, num_epochs=500, topk_accuracy=1, min_num_epoch=0, save_model=True,
+                        parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
 
             # path = os.path.join(directory_to_save_trained_model_and_csv, "state_dict" + ".pth")
             # state_dict = torch.load(path, map_location='cpu')

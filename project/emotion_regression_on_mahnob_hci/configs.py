@@ -1,6 +1,6 @@
-{
+config_mahnob = {
     "remote_root_directory": "/home/zhangsu/dataset/mahnob",
-    "local_root_directory": "E:\\Mahnob_full",
+    "local_root_directory": r"E:\Mahnob_full",
     "raw_data_folder": "Sessions",
     "openface_output_folder": "processed_48",
     "npy_folder": "compacted_48",
@@ -29,7 +29,7 @@
     "target_fps": 64,
 
     "openface_config": {
-        "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
+        "openface_directory": r"D:\OpenFace-master\x64\Release\FeatureExtraction",
         "input_flag": " -f ",
         "output_features": " -2Dfp ",
         "output_action_unit": "-aus",
