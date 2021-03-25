@@ -14,7 +14,7 @@ class ParamControl(GenericParamControl):
 
     @staticmethod
     def init_module_list():
-        return [[(4, 10), (163, 187)], [(142, 163)], [(121, 142)]]
+        return [[(4, 10)], [(163, 187)], [(142, 163)]]
 
         # return [[(4, 10), (205, 235)], [(187, 205)], [(169, 187)]]
 
@@ -51,6 +51,9 @@ class ParamControl(GenericParamControl):
 
             self.trainer.init_optimizer_and_scheduler()
             self.release_count -= 1
+        else:
+            raise ValueError("Early stopped since no further parameters to release!")
+
 
     def load_trainer(self, trainer):
         self.trainer = trainer

@@ -2,7 +2,7 @@ img_size = 48
 crop_size = 40
 
 config_affectnet = {
-    "remote_root_directory": "/home/zhangsu/dataset/affectnet/preprocessed",
+    "remote_root_directory": "/media/affectnet/preprocessed",
     "local_root_directory": "E:\\AffectNet",
     "local_image_folder": "Manually_Annotated_Images",
     "local_label_filename_train": "training.csv",

@@ -118,7 +118,7 @@ class Experiment(GenericExperiment):
         save_path = os.path.join(self.model_save_path, self.experiment_name + "_" + self.model_name + "_" + self.stamp)
         checkpoint_filename = os.path.join(save_path, "checkpoint.pkl")
 
-        model = self.init_model("state_dict_0.881")
+        model = self.init_model("state_dict_0.869")
         dataloader_dict, length_dict = self.init_dataloader()
         criterion = CCCLoss()
 

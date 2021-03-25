@@ -161,7 +161,7 @@ class ImageClassificationTrainer(GenericTrainer):
             self.model.load_state_dict(self.best_epoch_info['model_weights'])
 
         self.fit_finished = True
-        checkpoint_controller.save_checkpoint(self, self.save_path)
+        checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
     def loop(self, data_loader, train_mode=True, topk_accuracy=1):
 

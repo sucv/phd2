@@ -12,17 +12,17 @@ if __name__ == '__main__':
     parser.add_argument('-head', help='Multi-headed output? mh: multi-headed, sh: single-headed', default="mh")
     parser.add_argument('-lr', type=float, help='The initial learning rate.', default=1e-5)
     parser.add_argument('-d', type=float, help='Time delay between input and label, in seconds', default=0)
-    parser.add_argument('-p', type=int, help='Patience for learning rate changes', default=4)
-    parser.add_argument('-gpu', type=int, help='Which gpu to use?', default=1)
+    parser.add_argument('-p', type=int, help='Patience for learning rate changes', default=10)
+    parser.add_argument('-gpu', type=int, help='Which gpu to use?', default=0)
     parser.add_argument('-cpu', type=int, help='How many threads are allowed?', default=1)
-    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='0754')
-    parser.add_argument('-r', help='Resume from checkpoint?', default=1)
+    parser.add_argument('-s', type=str, help='To indicate different experiment instances', default='0929')
+    parser.add_argument('-r', help='Resume from checkpoint?', default=0)
     parser.add_argument('-hpc', help='On high-performance computing server or not?', default=0)
     parser.add_argument('-model_load_path', type=str, help='The path to load the trained model ',
                         default='/home/zhangsu/phd2/load')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', type=str, help='The path to save the trained model ',
                         default='/home/zhangsu/phd2/save')  # /scratch/users/ntu/su012/trained_model
-    parser.add_argument('-python_package_path', type=str, help='The path to load the trained model ',
+    parser.add_argument('-python_package_path', type=str, help='The path to the entire repository.',
                         default='/home/zhangsu/phd2')  # /scratch/users/ntu/su012/pretrained_model
 
     args = parser.parse_args()

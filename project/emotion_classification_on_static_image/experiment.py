@@ -165,7 +165,7 @@ class Experiment(GenericExperiment):
 
             trainer = ImageClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path, criterion=criterion,
                                                  num_classes=self.config['num_classes'], device=device, learning_rate=1e-3,
-                                                 fold=fold, milestone=milestone, patience=20, early_stopping=100, min_learning_rate=1e-5,
+                                                 fold=fold, milestone=milestone, patience=20, early_stopping=200, min_learning_rate=1e-5,
                                                  samples_weight=samples_weights)
 
             parameter_controller = ParamControl(trainer, release_count=3)
@@ -176,7 +176,7 @@ class Experiment(GenericExperiment):
             else:
                 checkpoint_controller.init_csv_logger()
 
-            trainer.fit(dataloader_dict, num_epochs=500, topk_accuracy=1, min_num_epoch=0, save_model=True,
+            trainer.fit(dataloader_dict, num_epochs=1500, topk_accuracy=1, min_num_epoch=0, save_model=True,
                         parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
 
             # path = os.path.join(directory_to_save_trained_model_and_csv, "state_dict" + ".pth")

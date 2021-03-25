@@ -1,5 +1,5 @@
 config_mahnob = {
-    "remote_root_directory": "/home/zhangsu/dataset/mahnob",
+    "remote_root_directory": "/media/mahnob",
     "local_root_directory": r"E:\Mahnob_full",
     "raw_data_folder": "Sessions",
     "openface_output_folder": "processed_48",

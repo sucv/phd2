@@ -20,8 +20,8 @@ class AVEC2019Trainer(GenericTrainer):
                  emotional_dimension=None, metrics=None, verbose=False, print_training_metric=False, **kwargs):
 
         # The device to use.
-        super().__init__(model, model_name, save_path, criterion, learning_rate, early_stopping, device, patience,
-                         verbose, **kwargs)
+        super().__init__(model, model_name=model_name, save_path=save_path, criterion=criterion, learning_rate=learning_rate,
+                         early_stopping=early_stopping, device=device, patience=patience, verbose=verbose, **kwargs)
         self.device = device
 
         # Whether to show the information strings.
@@ -63,7 +63,7 @@ class AVEC2019Trainer(GenericTrainer):
 
     def init_optimizer_and_scheduler(self):
         self.optimizer = optim.Adam(self.get_parameters(), lr=self.learning_rate, weight_decay=0.001)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience, factor=0.5)
 
     def get_parameters(self):
         r"""
@@ -134,7 +134,7 @@ class AVEC2019Trainer(GenericTrainer):
 
         # Loop the epochs
         for epoch in np.arange(start_epoch, num_epochs):
-            if parameter_controller.get_current_lr() < 1e-4:
+            if parameter_controller.get_current_lr() < 1e-6:
             # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
                 parameter_controller.release_param()
 
@@ -233,7 +233,7 @@ class AVEC2019Trainer(GenericTrainer):
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
         self.fit_finished = True
-        checkpoint_controller.save_checkpoint(self, self.save_path)
+        checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
         self.model.load_state_dict(self.best_epoch_info['model_weights'])
 

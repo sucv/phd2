@@ -1,0 +1,97 @@
+#!/bin/sh
+
+### Note that the first line tells the system that this is a shell script. 
+### Any lines started with #PBS are not comments,
+### but the job attributes for PBS Pro to read.
+
+### Request a single GPU
+### The "select=1" specifies the number of nodes
+### To ask for a whole node use "PBS -l select=1:ncpus=40:ngpus=8"
+### If you request less than 8 GPU then make the ncpus value
+###   five times the ngpus value, e.g. select=1:ncpus=5:ngpus=1
+#PBS -l select=1:ncpus=5:ngpus=1
+
+### Specify amount of time required (maximum 24 hours)
+### If you pay 5K SGD monthly then you can require 240 hours for a job :)
+#PBS -l walltime=24:00:00
+
+### Select the correct queue. For other available queues 
+### type "qstat -Q" in your console to see.
+#PBS -q dgx
+
+### Specify project code
+### e.g. 41000001 was the pilot project code
+### Job will not submit unless this is changed
+### The project code, if any, should appear in the welcome information 
+### in the console once you logged into your NSCC account.
+#PBS -P 12001577
+
+### Specify name for job
+### Here I use two variables $n_fold and $fold_to_run
+### to track the job-to-fold information.
+### If this job is for the 2nd fold of a 5-fold cv, then
+### the final job name will be semaine_5_2.
+### When the job is done, a log file named semaine_5_2.o4432523, and
+### an error file named semaine_5_2.e4432523, with
+### the "o" or "e", and job ID in the rear, will be generated. 
+### They records the standard outputs and errors during the job execution.
+#PBS -N base
+
+### Standard output by default goes to file $PBS_JOBNAME.o$PBS_JOBID
+### Standard error by default goes to file $PBS_JOBNAME.e$PBS_JOBID
+### To merge standard output and error use the following
+#PBS -j oe
+
+
+### Start of commands to be run
+
+### Change to directory where the job was submitted
+cd "$PBS_O_WORKDIR" || exit $?
+
+### Since our job is to simply run the python code, and 
+### we have built a personal container, we could simply
+### run the job by one line. The instructions for each segment 
+### are provided below.
+
+singularity run --nv --bind ~/scratch/dataset/:/media/ \
+        ~/scratch/pth_er.sif python ~/phd-main/main.py \
+        -n_fold $n_fold -fold_to_run $fold_to_run > \
+        main_log_{$n_fold}_{$fold_to_run}
+
+### Let us call the command above as "the long version".
+### A simplified "short version" of the command is
+### singularity run --nv my.sif python main_video_regression.py > main_log
+
+### We start by explaining the short version.
+### There are generally two segments. 
+
+### The first one "singularity run --nv my.sif" means
+### to use singularity to run "my.sif" container, with
+### nvidia cuda support enabled.
+
+### The second one "python main_video_regression.py > main_log" is exactly the same
+### as we did in daily PhD struggle, which is, to run the code,
+### and log the console output in a text file named "main_log".
+
+### In the long version, the exact paths for my.sif and main_video_regression.py are specified.
+### Also, there are some arguments to feed "main_video_regression.py". If your "main_video_regression.py" has no
+### input required, then simply remove "-n_fold $n_fold -fold_to_run $fold_to_run".
+
+### In the long version, "--bind ~/scratch/dataset/:/media/" tells Singularity
+### to bind "~/scratch/dataset/" in your personal NSCC directory with
+### "/media/" inside the container. For me, my dataset is uploaded to "~/scratch/dataset/",
+### and in my python code, the dataset is presumed to be located in "/media/Semaine".
+### As the actual folder "Semaine" is in "~/scratch/dataset/" of my NSCC directory,
+### doing so with make the code to function exactly as in my local computer.
+### For the official document of bind path, please see https://sylabs.io/guides/3.6/user-guide/bind_paths_and_mounts.html.
+
+### Some other commands that may be useful are provided below.
+### Print the environment variable of NSCC PBS Pro. So 
+### that you will know what the goddammit variables in
+### https://help.nscc.sg/wp-content/uploads/2016/08/PBS_Professional_Quick_Reference.pdf
+### are.
+### printenv > log1
+
+### Print the initial graphic card information for this job
+### nvidia-smi > log2 ### or, with file name specified by variables
+### nvidia-smi > log_$n_fold_$fold_to_run

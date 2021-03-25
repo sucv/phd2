@@ -225,7 +225,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
         self.fit_finished = True
-        checkpoint_controller.save_checkpoint(self, self.save_path)
+        checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
         self.model.load_state_dict(self.best_epoch_info['model_weights'])
 
         if save_model:

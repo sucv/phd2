@@ -1,7 +1,7 @@
 frame_size = 48
 crop_size = 40
 window_length = 300
-hop_size = 300
+hop_size = 100
 
 avec2019_config = {
     "program_name": "avec2019",
@@ -17,7 +17,7 @@ avec2019_config = {
     "save_metric_result": True,
     "window_length": window_length,
     "hop_size": hop_size,
-    "remote_root_directory": "/home/zhangsu/dataset/avec2019",
+    "remote_root_directory": "/media/avec2019",
     "local_root_directory": "E:\\AVEC2019",
     "raw_data_folder": "raw_data",
     "openface_output_folder": "processed_48",
