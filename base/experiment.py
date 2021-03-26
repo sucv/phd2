@@ -11,10 +11,11 @@ import torch.cuda
 class GenericExperiment(object):
     def __init__(self, args):
         self.args = args
-        self.experiment_name = args.exp
+        self.experiment_name = args.experiment_name
+        self.dataset = args.dataset
         self.model_load_path = args.model_load_path
         self.model_save_path = args.model_save_path
-        self.resume = args.r
+        self.resume = args.resume
         self.config = self.load_config()
         self.init_random_seed()
 
@@ -23,7 +24,7 @@ class GenericExperiment(object):
         self.cpu = args.cpu
         # If the code is to run on high-performance computer, which is usually not
         # available to specify gpu index and cpu threads, then set them to none.
-        if self.args.hpc:
+        if self.args.high_performance_cluster:
             self.gpu = None
             self.cpu = None
 
@@ -41,7 +42,7 @@ class GenericExperiment(object):
     def init_device(self):
         device = detect_device()
 
-        if not self.args.hpc:
+        if not self.args.high_performance_cluster:
             select_gpu(self.gpu)
             set_cpu_thread(self.cpu)
 

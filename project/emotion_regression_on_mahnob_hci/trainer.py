@@ -20,8 +20,9 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                  emotional_dimension=['Valence'], metrics=None, verbose=False, print_training_metric=False, **kwargs):
 
         # The device to use.
-        super().__init__(model, model_name, save_path, criterion, learning_rate, early_stopping, device, max_epoch,
-                         patience, verbose, **kwargs)
+        super().__init__(model=model, model_name=model_name, save_path=save_path, criterion=criterion,
+                         learning_rate=learning_rate, early_stopping=early_stopping, device=device, max_epoch=max_epoch,
+                         patience=patience, verbose=verbose, **kwargs)
 
         self.device = device
 
@@ -55,9 +56,10 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         self.fold_finished = False
         self.resume = False
         self.time_fit_start = None
-        self.combined_record_dict = {'train': {}, 'validate': {}}
+        self.combined_record_dict = {'train': {}, 'validate': {}, 'test': {}}
         self.train_losses = []
         self.validate_losses = []
+        self.test_losses = []
         self.csv_filename = None
         self.best_epoch_info = None
 
@@ -90,6 +92,29 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         self.model.eval()
         return self.loop(data_loader, length_to_track, epoch, train_mode=False)
 
+    def test(
+            self,
+            data_to_load,
+            length_to_track,
+            checkpoint_controller=None
+    ):
+        if self.verbose:
+            print("------")
+            print("Starting testing, on device:", self.device)
+
+        test_loss, test_record_dict = self.validate(data_to_load['test'], length_to_track['test'], epoch=None)
+
+        self.combined_record_dict['test'] = self.combine_record_dict(
+            self.combined_record_dict['test'], test_record_dict)
+
+        if self.verbose:
+            print(test_record_dict['overall'])
+            print("------")
+
+        checkpoint_controller.save_log_to_csv(test_record=test_record_dict)
+
+        self.fold_finished = True
+
     def fit(
             self,
             data_to_load,
@@ -100,6 +125,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             parameter_controller=None,
             save_model=False
     ):
+
         r"""
         The function to carry out training and validation.
         :param directory_to_save_checkpoint_and_plot:
@@ -132,7 +158,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         # Loop the epochs
         for epoch in np.arange(start_epoch, num_epochs):
             if parameter_controller.get_current_lr() < 1e-6:
-            # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
+                # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
                 parameter_controller.release_param()
 
             time_epoch_start = time.time()
@@ -145,7 +171,8 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             self.combined_record_dict['train'] = self.combine_record_dict(
                 self.combined_record_dict['train'], train_record_dict)
 
-            validate_loss, validate_record_dict = self.validate(data_to_load['validate'], length_to_track['validate'], epoch)
+            validate_loss, validate_record_dict = self.validate(data_to_load['validate'], length_to_track['validate'],
+                                                                epoch)
 
             self.combined_record_dict['validate'] = self.combine_record_dict(
                 self.combined_record_dict['validate'], validate_record_dict)
@@ -160,10 +187,10 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             # If a lower validate loss appears.
             if validate_ccc > self.best_epoch_info['ccc']:
                 if save_model:
-                    torch.save(self.model.state_dict(), self.save_path)
+                    torch.save(self.model.state_dict(), os.path.join(self.save_path, "model_state_dict.pth"))
 
                 improvement = True
-                best_epoch_info = {
+                self.best_epoch_info = {
                     'model_weights': copy.deepcopy(self.model.state_dict()),
                     'loss': validate_loss,
                     'ccc': validate_ccc,
@@ -225,7 +252,6 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
         self.fit_finished = True
-        checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
         self.model.load_state_dict(self.best_epoch_info['model_weights'])
 
         if save_model:
@@ -244,7 +270,6 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         total_batch_counter = 0
         for batch_index, (X, Y, absolute_indices, sessions) in tqdm(enumerate(data_loader), total=len(data_loader)):
 
-
             total_batch_counter += len(sessions)
 
             inputs = X.to(self.device)
@@ -258,8 +283,10 @@ class MAHNOBRegressionTrainer(GenericTrainer):
 
             outputs = self.model(inputs)
 
-            output_handler.place_clip_output_to_subjectwise_dict(outputs.detach().cpu().numpy(), absolute_indices, sessions)
-            continuous_label_handler.place_clip_output_to_subjectwise_dict(labels.detach().cpu().numpy()[:, :, np.newaxis], absolute_indices, sessions)
+            output_handler.place_clip_output_to_subjectwise_dict(outputs.detach().cpu().numpy(), absolute_indices,
+                                                                 sessions)
+            continuous_label_handler.place_clip_output_to_subjectwise_dict(
+                labels.detach().cpu().numpy()[:, :, np.newaxis], absolute_indices, sessions)
             loss = self.criterion(outputs, labels.unsqueeze(2)) * outputs.size(0)
 
             running_loss += loss.mean().item()
@@ -303,7 +330,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         r"""
         Append the metric recording dictionary of an epoch to a main record dictionary.
             Each single term from epoch_record_dict will be appended to the corresponding
-            list in min_record_dict.
+            list in main_record_dict.
         Therefore, the minimum terms in main_record_dict are lists, whose element number
             are the epoch number.
         """

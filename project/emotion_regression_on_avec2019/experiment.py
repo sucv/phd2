@@ -1,8 +1,8 @@
 from base.experiment import GenericExperiment
+from models.model import my_2d1d, my_2dlstm
 from project.emotion_regression_on_avec2019.dataset import AVEC2019Arranger, AVEC2019Dataset
 from project.emotion_regression_on_avec2019.checkpointer import Checkpointer
 from project.emotion_regression_on_avec2019.trainer import AVEC2019Trainer
-from project.emotion_regression_on_avec2019.model import my_2d1d, my_2dlstm
 from project.emotion_regression_on_avec2019.parameter_control import ParamControl
 from base.loss_function import CCCLoss
 
@@ -16,11 +16,11 @@ from torch.utils import data
 class Experiment(GenericExperiment):
     def __init__(self, args):
         super().__init__(args)
-        self.train_country = args.tc
-        self.validate_country = args.vc
-        self.model = args.m
-        self.stamp = args.s
-        self.train_emotion = self.get_train_emotion(args.e)
+        self.train_country = args.train_country
+        self.validate_country = args.validate_country
+
+        self.stamp = args.stamp
+        self.train_emotion = self.get_train_emotion(args.train_emotion)
 
         self.head = "single-headed"
         self.emotion_dimension = [self.train_emotion.capitalize()]
@@ -28,16 +28,30 @@ class Experiment(GenericExperiment):
             self.head = "multi-headed"
             self.emotion_dimension = ["Arousal", "Valence"]
 
-        self.model_name = self.experiment_name + "_" + args.m + "_" + self.train_emotion
+        self.model_name = self.experiment_name + "_" + args.model_name + "_" + self.train_emotion
+        self.backbone_state_dict = args.backbone_state_dict
+        self.backbone_mode = args.backbone_mode
 
-        self.learning_rate = args.lr
-        self.patience = args.p
-        self.time_delay = args.d
+        self.cnn1d_embedding_dim = args.cnn1d_embedding_dim
+        self.cnn1d_channels = args.cnn1d_channels
+        self.cnn1d_kernel_size = args.cnn1d_kernel_size
+        self.cnn1d_dropout = args.cnn1d_dropout
+        self.lstm_embedding_dim = args.lstm_embedding_dim
+        self.lstm_hidden_dim = args.lstm_hidden_dim
+        self.lstm_dropout = args.lstm_dropout
 
+        self.milestone = args.milestone
+        self.learning_rate = args.learning_rate
+        self.patience = args.patience
+        self.time_delay = args.time_delay
+        self.num_epochs = args.num_epochs
+        self.min_num_epochs = args.min_num_epochs
+
+        self.release_count = args.release_count
         self.device = self.init_device()
 
     def load_config(self):
-        from project.emotion_regression_on_avec2019.configs import avec2019_config as config
+        from project.emotion_regression_on_avec2019.configs import config_avec2019 as config
         return config
 
     @staticmethod
@@ -53,39 +67,24 @@ class Experiment(GenericExperiment):
 
         return emotion
 
-    def init_model(self, backbone_model_name):
-        # # Here we initialize the model. It contains the spatial block and temporal block.
-        # FRAME_DIM = 96
-        # TIME_DEPTH = 300
-        # SHARED_LINEAR_DIM1 = 1024
-        # SHARED_LINEAR_DIM2 = 512
-        # EMBEDDING_DIM = SHARED_LINEAR_DIM2
-        # HIDDEN_DIM = 512
-        # OUTPUT_DIM = 2
-        # N_LAYERS = 1
-        # DROPOUT_RATE_1 = 0.5
-        # DROPOUT_RATE_2 = 0.5
-        # model = initialize_emotion_spatial_temporal_model(
-        #     self.device, frame_dim=FRAME_DIM, time_depth=TIME_DEPTH,
-        #     shared_linear_dim1=SHARED_LINEAR_DIM1,
-        #     shared_linear_dim2=SHARED_LINEAR_DIM2,
-        #     embedding_dim=EMBEDDING_DIM,
-        #     hidden_dim=HIDDEN_DIM, output_dim=OUTPUT_DIM, n_layers=N_LAYERS,
-        #     dropout_rate_1=DROPOUT_RATE_1, dropout_rate_2=DROPOUT_RATE_2
-        # )
+    def init_model(self):
 
         if self.head == "multi-headed":
             output_dim = 2
         else:
             output_dim = 1
 
-        if self.model == "2d1d":
-            model = my_2d1d(backbone_model_name=backbone_model_name, feature_dim=512,
-                            channels_1D=[128, 128, 128, 128, 128], output_dim=output_dim, kernel_size=5, dropout=0.1,
-                            root_dir=self.model_load_path)
-        elif self.model == "2dlstm":
-            model = my_2dlstm(backbone_model_name=backbone_model_name, feature_dim=512, hidden_dim=256,
-                              output_dim=output_dim, dropout=0.4, root_dir=self.model_load_path)
+        if "2d1d" in self.model_name:
+            model = my_2d1d(backbone_state_dict=self.backbone_state_dict, backbone_mode=self.backbone_mode,
+                            embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
+                            output_dim=output_dim, kernel_size=self.cnn1d_kernel_size,
+                            dropout=self.cnn1d_dropout, root_dir=self.model_load_path)
+
+        elif "2dlstm" in self.model_name:
+            model = my_2dlstm(backbone_state_dict=self.backbone_state_dict, backbone_mode=self.backbone_mode,
+                              embedding_dim=self.lstm_embedding_dim, hidden_dim=self.lstm_hidden_dim,
+                              output_dim=output_dim, dropout=self.lstm_dropout,
+                              root_dir=self.model_load_path)
         else:
             raise ValueError("Unknown base_model!")
 
@@ -115,28 +114,27 @@ class Experiment(GenericExperiment):
 
     def experiment(self):
 
-        save_path = os.path.join(self.model_save_path, self.experiment_name + "_" + self.model_name + "_" + self.stamp)
+        save_path = os.path.join(self.model_save_path, self.model_name)
         checkpoint_filename = os.path.join(save_path, "checkpoint.pkl")
 
-        model = self.init_model("state_dict_0.869")
+        model = self.init_model()
         dataloader_dict, length_dict = self.init_dataloader()
         criterion = CCCLoss()
 
-        milestone = [1000]
-        trainer = AVEC2019Trainer(model, stamp=self.stamp, model_name=self.model_name, learning_rate=self.learning_rate,
+        trainer = AVEC2019Trainer(model, model_name=self.model_name, learning_rate=self.learning_rate,
                                   metrics=self.config['metrics'], save_path=save_path, early_stopping=20,
                                   train_emotion=self.train_emotion, patience=self.patience,
                                   emotional_dimension=self.emotion_dimension, head=self.head,
-                                  milestone=milestone, criterion=criterion, verbose=True, device=self.device)
+                                  milestone=self.milestone, criterion=criterion, verbose=True, device=self.device)
 
-        parameter_controller = ParamControl(trainer, release_count=8)
+        parameter_controller = ParamControl(trainer, release_count=self.release_count)
 
         checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 
         if self.resume:
             trainer, parameter_controller = checkpoint_controller.load_checkpoint()
         else:
-            checkpoint_controller.init_csv_logger()
+            checkpoint_controller.init_csv_logger(self.args, self.config)
 
-        trainer.fit(dataloader_dict, length_dict, num_epochs=200, min_num_epoch=0, save_model=True,
-                    parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
+        trainer.fit(dataloader_dict, length_dict, num_epochs=self.num_epochs, min_num_epochs=self.min_num_epochs,
+                    save_model=True, parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)

@@ -35,7 +35,7 @@
 ### an error file named semaine_5_2.e4432523, with
 ### the "o" or "e", and job ID in the rear, will be generated. 
 ### They records the standard outputs and errors during the job execution.
-#PBS -N avec19
+#PBS -N mahnob
 
 ### Standard output by default goes to file $PBS_JOBNAME.o$PBS_JOBID
 ### Standard error by default goes to file $PBS_JOBNAME.e$PBS_JOBID
@@ -55,4 +55,4 @@ cd "$PBS_O_WORKDIR" || exit $?
 
 singularity run --nv --bind ~/scratch/dataset:/media/ \
         ~/scratch/pth_er.sif python ~/phd2/project/emotion_regression_on_mahnob_hci/main.py \
-        -folds_to_run $folds_to_run -s $s -e $e -lr $lr -d $d -m $m -r $r -hpc $hpc> output/main_log_{$folds_to_run}_{$s}_{$e}_{$lr}_{$d}_{$m}_{$r}
+        -folds_to_run $fr -stamp $s  -resume $r -high_performance_cluster $hpc> output/main_log

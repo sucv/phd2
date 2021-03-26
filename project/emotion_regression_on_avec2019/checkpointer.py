@@ -47,7 +47,16 @@ class Checkpointer(GenericCheckpointer):
         row_df = pd.DataFrame(data=csv_records)
         row_df.T.to_csv(self.trainer.csv_filename, mode='a', index=False, header=False)
 
-    def init_csv_logger(self):
+    def init_csv_logger(self, args, config):
+
+        # Record the arguments.
+        arguments_dict = vars(args)
+        df_args = pd.DataFrame(data=arguments_dict)
+        df_args.to_csv(self.trainer.csv_filename, index=False)
+
+        df_config = pd.DataFrame(data=config)
+        df_config.to_csv(self.trainer.csv_filename, mode='a', index=False)
+
         self.columns = ['time', 'epoch', 'best_epoch', 'layer_to_update', 'lr',
                         'tr_loss', 'val_loss']
 
@@ -66,5 +75,5 @@ class Checkpointer(GenericCheckpointer):
 
         df = pd.DataFrame(columns=self.columns)
         self.trainer.csv_filename = os.path.join(self.trainer.save_path, "training_logs.csv")
-        df.to_csv(self.trainer.csv_filename, index=False)
+        df.to_csv(self.trainer.csv_filename, mode='a', index=False)
 

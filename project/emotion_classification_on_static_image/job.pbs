@@ -35,7 +35,7 @@
 ### an error file named semaine_5_2.e4432523, with
 ### the "o" or "e", and job ID in the rear, will be generated. 
 ### They records the standard outputs and errors during the job execution.
-#PBS -N affectnet
+#PBS -N emo_img
 
 ### Standard output by default goes to file $PBS_JOBNAME.o$PBS_JOBID
 ### Standard error by default goes to file $PBS_JOBNAME.e$PBS_JOBID
@@ -55,8 +55,7 @@ cd "$PBS_O_WORKDIR" || exit $?
 
 singularity run --nv --bind ~/scratch/dataset/:/media/ \
         ~/scratch/pth_er.sif python ~/phd2/project/emotion_classification_on_static_image/main.py \
-        -d $dataset -hpc $hpc -s $stamp -r $resume > \
-        main_log_{$n_fold}_{$fold_to_run}
+        -dataset $d -high_performance_cluster $hpc -stamp $s -r $resume > main_log
 
 ### Let us call the command above as "the long version".
 ### A simplified "short version" of the command is

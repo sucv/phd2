@@ -30,11 +30,13 @@ class ImageClassificationTrainer(GenericTrainer):
 
         # parameter_control
         self.fit_finished = False
+        self.fold_finished = False
         self.resume = False
         self.train_losses = []
         self.validate_losses = []
         self.train_accuracies = []
         self.validate_accuracies = []
+        self.test_accuracy = -1
         self.csv_filename = ''
         self.best_epoch_info = {}
 
@@ -66,7 +68,26 @@ class ImageClassificationTrainer(GenericTrainer):
             epoch_loss, epoch_acc = self.loop(data_loader, train_mode=False, topk_accuracy=topk_accuracy)
         return epoch_loss, epoch_acc
 
-    def fit(self, dataloaders_dict, num_epochs=10,  topk_accuracy=1, min_num_epoch=0,
+    def test(
+            self,
+            data_to_load,
+            topk_accuracy,
+            checkpoint_controller=None
+    ):
+        if self.verbose:
+            print("------")
+            print("Starting testing, on device:", self.device)
+
+        _, self.test_accuracy = self.validate(data_to_load['test'], topk_accuracy)
+
+        if self.verbose:
+            print("Test accuracy: {:.3f}".format(self.test_accuracy))
+            print("------")
+
+        checkpoint_controller.save_log_to_csv()
+        self.fold_finished = True
+
+    def fit(self, dataloaders_dict, num_epochs=10,  topk_accuracy=1, min_num_epochs=0,
             parameter_controller=None, checkpoint_controller=None, save_model=False):
         if self.verbose:
             print("-------")
@@ -118,7 +139,7 @@ class ImageClassificationTrainer(GenericTrainer):
                 if save_model:
                     torch.save(self.model.state_dict(), current_save_path)
 
-            if self.early_stopping and epoch > min_num_epoch:
+            if self.early_stopping and epoch > min_num_epochs:
                 if improvement:
                     self.early_stopping_counter = self.early_stopping
                 else:
@@ -161,7 +182,6 @@ class ImageClassificationTrainer(GenericTrainer):
             self.model.load_state_dict(self.best_epoch_info['model_weights'])
 
         self.fit_finished = True
-        checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
     def loop(self, data_loader, train_mode=True, topk_accuracy=1):
 

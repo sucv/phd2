@@ -14,51 +14,68 @@ from operator import itemgetter
 import torch
 from torch.utils import data
 from torchvision.datasets import ImageFolder
-from torchvision.transforms import Compose, Resize, RandomHorizontalFlip, RandomCrop, CenterCrop, RandomAffine, ColorJitter, ToTensor, Normalize
+from torchvision.transforms import Compose, Resize, RandomHorizontalFlip, RandomCrop, CenterCrop, RandomAffine, \
+    ColorJitter, ToTensor, Normalize
 import numpy as np
 
 
 class Experiment(GenericExperiment):
     def __init__(self, args):
         super().__init__(args)
-        self.stamp = args.s
-        self.num_folds = args.n_fold
-        if args.fold_to_run is None:
-            self.fold_to_run = np.arange(0, self.num_folds)
 
-        if not args.cv:
+        self.stamp = args.stamp
+        self.num_folds = args.num_folds
+        if args.folds_to_run is None:
+            self.folds_to_run = np.arange(0, self.num_folds)
+
+        self.cross_validation = args.cross_validation
+        if not self.cross_validation:
             self.fold_to_run = [0]
 
-        self.dataset = args.d
-        self.model = args.m
-        self.cross_validation = args.cv
-        self.model_name = args.m + "_" + args.d
+        self.save_model = args.save_model
+        self.model_name = args.model_name + "_" + args.dataset
+        self.model_mode = args.model_mode
+        self.learning_rate = args.learning_rate
+        self.min_learning_rate = args.min_learning_rate
+        self.num_epochs = args.num_epochs
+        self.min_num_epochs = args.min_num_epochs
+        self.topk_accuracy = args.topk_accuracy
+
+        self.factor = args.factor
+        self.patience = args.patience
+        self.early_stopping = args.early_stopping
+
+        self.milestone = [0]
+        self.release_count = args.release_count
+
 
     def init_model(self):
-        model = my_res50(root_dir=self.model_load_path, num_classes=self.config['num_classes'], mode="ir",
-                         use_pretrained=self.config['use_pretrained'], state_dict_name="backbone_ir50_ms1m_epoch120")
+
+        state_dict_name = self.config['state_dict_setting'][self.model_mode]
+        model = my_res50(root_dir=self.model_load_path, num_classes=self.config['num_classes'], mode=self.model_mode,
+                         use_pretrained=self.config['use_pretrained'], state_dict_name=state_dict_name)
         return model
 
     def load_config(self):
-        if self.args.d == "affectnet":
+        if self.dataset == "affectnet":
             from project.emotion_classification_on_static_image.configs import config_affectnet as config
 
-        elif self.args.d == "ck+":
+        elif self.dataset == "ck+":
             from project.emotion_classification_on_static_image.configs import config_ckplus as config
 
-        elif self.args.d == "fer2013":
+        elif self.dataset == "fer2013":
             from project.emotion_classification_on_static_image.configs import config_fer2013 as config
 
-        elif self.args.d == "fer+":
+        elif self.dataset == "ferp":
             from project.emotion_classification_on_static_image.configs import config_ferplus as config
 
-        elif self.args.d == "rafd":
+        elif self.dataset == "rafd":
             from project.emotion_classification_on_static_image.configs import config_rafd as config
 
-        elif self.args.d == "rafdb":
+        elif self.dataset == "rafdb":
             from project.emotion_classification_on_static_image.configs import config_rafdb as config
 
-        elif self.args.d == "oulu":
+        elif self.dataset == "oulu":
             from project.emotion_classification_on_static_image.configs import config_oulu as config
         else:
             raise ValueError("Unknown dataset!")
@@ -104,7 +121,7 @@ class Experiment(GenericExperiment):
         transform, transform_val = transform_dict['train'], transform_dict['validate']
 
         if self.cross_validation:
-            fold_index = np.roll(self.fold_to_run, fold)
+            fold_index = np.roll(self.folds_to_run, fold)
             fold_list = list(itemgetter(*fold_index)(fold_list_origin))
 
             # Need to specify according to the total fold number.
@@ -122,9 +139,8 @@ class Experiment(GenericExperiment):
                                         transform=transform)
 
             validate_dataset = ImageFolder(os.path.join(self.config['remote_root_directory'], 'validate'),
-                                      transform=transform_val)
+                                           transform=transform_val)
             # Some datasets did not provide test sets.
-
             test_dataset = None
             if os.path.isdir(os.path.join(self.config['remote_root_directory'], 'test')):
                 test_dataset = ImageFolder(os.path.join(self.config['remote_root_directory'], 'test'),
@@ -161,26 +177,25 @@ class Experiment(GenericExperiment):
                                                                     fold_list_origin=fold_list_origin)
             model = self.init_model()
             criterion = FocalLoss()
-            milestone = [0]
+            milestone = self.milestone
 
-            trainer = ImageClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path, criterion=criterion,
-                                                 num_classes=self.config['num_classes'], device=device, learning_rate=1e-3,
-                                                 fold=fold, milestone=milestone, patience=20, early_stopping=200, min_learning_rate=1e-5,
-                                                 samples_weight=samples_weights)
+            trainer = ImageClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path,
+                                                 criterion=criterion, num_classes=self.config['num_classes'], device=device,
+                                                 learning_rate=self.learning_rate, fold=fold, milestone=milestone, patience=self.patience,
+                                                 early_stopping=self.early_stopping, min_learning_rate=self.min_learning_rate, samples_weight=samples_weights)
 
-            parameter_controller = ParamControl(trainer, release_count=3)
+            parameter_controller = ParamControl(trainer, release_count=self.release_count)
             checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 
             if self.resume:
                 trainer, parameter_controller = checkpoint_controller.load_checkpoint()
             else:
-                checkpoint_controller.init_csv_logger()
+                checkpoint_controller.init_csv_logger(self.args, self.config)
 
-            trainer.fit(dataloader_dict, num_epochs=1500, topk_accuracy=1, min_num_epoch=0, save_model=True,
+            trainer.fit(dataloader_dict, num_epochs=self.num_epochs, topk_accuracy=self.topk_accuracy,
+                        min_num_epochs=self.min_num_epochs, save_model=self.save_model,
                         parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
 
-            # path = os.path.join(directory_to_save_trained_model_and_csv, "state_dict" + ".pth")
-            # state_dict = torch.load(path, map_location='cpu')
-            # model.load_state_dict(state_dict['net_state_dict'])
-            # test_loss, test_acc = trainer.validate(dataloader_dict['test'], topk_accuracy=1)
-            # print("The test accuracy on fold {} is {}".format(str(fold), str(test_acc)))
+            if dataloader_dict['test'] is not None:
+                trainer.test(data_to_load=dataloader_dict, topk_accuracy=1, checkpoint_controller=checkpoint_controller)
+                checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)

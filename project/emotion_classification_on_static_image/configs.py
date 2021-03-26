@@ -1,8 +1,14 @@
 img_size = 48
 crop_size = 40
+state_dict_name = "backbone_ir50_ms1m_epoch120"
+
+state_dict_setting = {
+    "ir": "backbone_ir50_ms1m_epoch120",
+    "ir_se": "model_ir_se50"
+}
 
 config_affectnet = {
-    "remote_root_directory": "/media/affectnet/preprocessed",
+    "remote_root_directory": "/home/zhangsu/dataset/affectnet/preprocessed",
     "local_root_directory": "E:\\AffectNet",
     "local_image_folder": "Manually_Annotated_Images",
     "local_label_filename_train": "training.csv",
@@ -16,7 +22,8 @@ config_affectnet = {
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
-    "batch_size": 128
+    "batch_size": 32,
+    "state_dict_setting": state_dict_setting
 }
 
 config_ckplus = {
@@ -32,6 +39,7 @@ config_ckplus = {
     "num_classes": 8,
     "batch_size": 32,
     "use_pretrained": True,
+    "state_dict_setting": state_dict_setting,
     "openface_config": {
         "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
         "input_flag": " -fdir ",
@@ -52,7 +60,7 @@ config_ferplus = {
     "root_csv_filename": "fer2013",
     "local_output_directory": "E:\\fer+\\preprocessed",
     "use_pretrained": True,
-    "imbalanced": False,
+    "state_dict_setting": state_dict_setting,
     "resize": img_size,
     "center_crop": crop_size,
     "mean": [0.5, 0.5, 0.5],
@@ -69,6 +77,7 @@ config_fer2013 = {
     "resize": img_size,
     "center_crop": crop_size,
     "use_pretrained": True,
+    "state_dict_setting": state_dict_setting,
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 7,
@@ -82,6 +91,7 @@ config_oulu = {
     "resize": img_size,
     "center_crop": crop_size,
     "use_pretrained": True,
+    "state_dict_setting": state_dict_setting,
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 6,
@@ -107,6 +117,7 @@ config_rafd = {
     "resize": img_size,
     "center_crop": crop_size,
     "use_pretrained": True,
+    "state_dict_setting": state_dict_setting,
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
@@ -126,12 +137,13 @@ config_rafd = {
 }
 
 config_rafdb = {
-"remote_root_directory": "/home/zhangsu/dataset/rafdb/preprocessed",
+    "remote_root_directory": "/home/zhangsu/dataset/rafdb/preprocessed",
     "local_root_directory": "E:\\rafdb",
     "local_image_folder": "Image\\aligned",
     "local_label_filename": "list_patition_label.txt",
     "local_output_directory": "E:\\rafdb\\preprocessed",
     "use_pretrained": True,
+    "state_dict_setting": state_dict_setting,
     "resize": img_size,
     "center_crop": crop_size,
     "mean": [0.5, 0.5, 0.5],

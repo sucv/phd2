@@ -99,7 +99,7 @@ class AVEC2019Trainer(GenericTrainer):
             data_to_load,
             length_to_track,
             num_epochs=100,
-            min_num_epoch=10,
+            min_num_epochs=10,
             checkpoint_controller=None,
             parameter_controller=None,
             save_model=False
@@ -191,7 +191,7 @@ class AVEC2019Trainer(GenericTrainer):
                 }
 
             # Early stopping controller.
-            if self.early_stopping and epoch > min_num_epoch:
+            if self.early_stopping and epoch > min_num_epochs:
                 if improvement:
                     self.early_stopping_counter = self.early_stopping
                 else:

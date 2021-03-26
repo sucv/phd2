@@ -55,4 +55,4 @@ cd "$PBS_O_WORKDIR" || exit $?
 
 singularity run --nv --bind ~/scratch/dataset:/media/ \
         ~/scratch/pth_er.sif python ~/phd2/project/emotion_regression_on_avec2019/main.py \
-        -s $s -e $e -lr $lr -d $d -m $m -r $r -hpc $hpc> output/main_log_{$s}_{$e}_{$lr}_{$d}_{$m}_{$r}
+        -stamp $s -train_emotion $e  -resume $r -high_performance_cluster $hpc> output/main_log

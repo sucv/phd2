@@ -35,7 +35,11 @@ class PreprocessingAffectNet(GenericImagePreprcessing):
         landmark_handler = facial_image_crop_by_landmark(self.config)
 
         for label_csv_file in self.label_csv_list:
-            partition = label_csv_file
+
+            # Make the folder naming universal.
+            partition = "train"
+            if label_csv_file == "validation":
+                partition = "validate"
 
             csv_data = load_single_csv(self.root_directory, label_csv_file, ".csv")
 
@@ -111,7 +115,7 @@ class PreprocessingFER2013(GenericImagePreprcessing):
         self.root_csv_filename = config['root_csv_filename']
         self.output_directory = config['local_output_directory']
         self.emotion_dict = self.init_emotion_dict()
-        self.partition_dict = {"Training": "Train", "PrivateTest": "Validate", "PublicTest": "Test"}
+        self.partition_dict = {"Training": "train", "PrivateTest": "validate", "PublicTest": "test"}
         self.image_preprocessing()
 
     def init_emotion_dict(self):
