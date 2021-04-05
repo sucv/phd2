@@ -14,7 +14,7 @@ class Checkpointer(GenericCheckpointer):
 
     def save_log_to_csv(self, epoch=0, mean_train_record=None, mean_validate_record=None, test_record=None):
 
-        if test_record is None:
+        if epoch is not None:
             num_layers_to_update = len(self.trainer.optimizer.param_groups[0]['params'])
             csv_records = [time.time(), epoch, int(self.trainer.best_epoch_info['epoch']), num_layers_to_update,
                            self.trainer.optimizer.param_groups[0]['lr'], self.trainer.train_losses[-1], self.trainer.validate_losses[-1],
@@ -32,11 +32,16 @@ class Checkpointer(GenericCheckpointer):
 
     def init_csv_logger(self, args, config):
 
+        self.trainer.csv_filename = os.path.join(self.trainer.save_path, "training_logs.csv")
+
         # Record the arguments.
         arguments_dict = vars(args)
+        arguments_dict = pd.json_normalize(arguments_dict, sep='_')
+
         df_args = pd.DataFrame(data=arguments_dict)
         df_args.to_csv(self.trainer.csv_filename, index=False)
 
+        config = pd.json_normalize(config, sep='_')
         df_config = pd.DataFrame(data=config)
         df_config.to_csv(self.trainer.csv_filename, mode='a', index=False)
 
@@ -45,5 +50,4 @@ class Checkpointer(GenericCheckpointer):
                         'val_rmse_v', 'val_pcc_v_v', 'val_pcc_v_conf', 'val_ccc_v']
 
         df = pd.DataFrame(columns=self.columns)
-        self.trainer.csv_filename = os.path.join(self.trainer.save_path, "training_logs.csv")
         df.to_csv(self.trainer.csv_filename, mode='a', index=False)

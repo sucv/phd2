@@ -48,5 +48,3 @@ class Checkpointer(GenericCheckpointer):
 
         df = pd.DataFrame(columns=self.columns)
         df.to_csv(self.trainer.csv_filename, mode='a', index=False)
-
-

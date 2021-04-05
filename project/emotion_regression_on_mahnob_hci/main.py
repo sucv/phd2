@@ -4,7 +4,7 @@ import argparse
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="emotion_video", help='The experiment name.')
-    parser.add_argument('-job', default=0, type=int, help='What job to run? 0: Regression Valence')
+    parser.add_argument('-job', default=1, type=int, help='What job to run? 0: Regression Valence, 1: Classification Valence')
     parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, help='On high-performance server or not?')

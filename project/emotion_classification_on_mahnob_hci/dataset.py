@@ -50,7 +50,8 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         if self.job == "reg_v":
             indices = np.where(self.dataset_info['having_continuous_label'] == 1)[0]
         else:
-            indices = np.where(np.asarray(self.dataset_info['having_eeg']) == 1)[0]
+            # indices = np.where(np.asarray(self.dataset_info['having_eeg']) == 1)[0]
+            indices = np.where(self.dataset_info['having_continuous_label'] == 1)[0]
         return indices
 
     def make_data_dict(self, subject_id_of_all_folds, partition_dictionary):

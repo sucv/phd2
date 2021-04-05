@@ -1,5 +1,6 @@
+import numpy as np
 import torch
-from torch import nn, optim
+from torch import optim
 
 
 class GenericTrainer(object):
@@ -51,6 +52,28 @@ class GenericTrainer(object):
             if param.requires_grad:
                 params_to_update.append(param)
         return params_to_update
+
+    def compute_accuracy(self, outputs, targets, k=1):
+        _, preds = outputs.topk(k, 1, True, True)
+        preds = preds.t()
+        correct = preds.eq(targets.view(1, -1).expand_as(preds))
+        correct_k = correct[:k].view(-1).float()
+        return correct_k
+
+    def get_preds(self, outputs, k=1):
+        _, preds = outputs.topk(k, 1, True, True)
+        preds = preds.t()
+        return preds[0]
+
+    def calculate_confusion_matrix(self, preds, labels):
+        confusion_matrix = np.zeros((self.num_classes, self.num_classes + 1))
+        for label, pred in zip(labels, preds):
+            confusion_matrix[label, pred] += 1
+
+        confusion_matrix[:, -1] = np.sum(confusion_matrix, axis=1)
+        confusion_matrix[:, :-1] /= confusion_matrix[:, -1]
+        confusion_matrix[:, :-1] = np.around(confusion_matrix[:, :-1], decimals=3)
+        return confusion_matrix
 
     def train(self, **kwargs):
         raise NotImplementedError

@@ -23,7 +23,8 @@ config_affectnet = {
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
     "batch_size": 32,
-    "state_dict_setting": state_dict_setting
+    "state_dict_setting": state_dict_setting,
+    "use_weighted_sampler": False
 }
 
 config_ckplus = {
@@ -66,11 +67,12 @@ config_ferplus = {
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
-    "batch_size": 32
+    "batch_size": 32,
+    "use_weighted_sampler": False
 }
 
 config_fer2013 = {
-"remote_root_directory": "/home/zhangsu/dataset/fer2013/preprocessed",
+    "remote_root_directory": "/home/zhangsu/dataset/fer2013/preprocessed",
     "local_root_directory": "E:\\fer2013",
     "root_csv_filename": "fer2013",
     "local_output_directory": "E:\\fer2013\\preprocessed",
@@ -81,7 +83,8 @@ config_fer2013 = {
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 7,
-    "batch_size": 32
+    "batch_size": 32,
+    "use_weighted_sampler": False
 }
 
 config_oulu = {
@@ -96,6 +99,7 @@ config_oulu = {
     "std": [0.5, 0.5, 0.5],
     "num_classes": 6,
     "batch_size": 32,
+    "use_weighted_sampler": False,
     "openface_config": {
         "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
         "input_flag": " -f ",
@@ -122,6 +126,7 @@ config_rafd = {
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
     "batch_size": 32,
+    "use_weighted_sampler": False,
     "openface_config": {
         "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
         "input_flag": " -f ",
@@ -149,6 +154,7 @@ config_rafdb = {
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 7,
-    "batch_size": 32
+    "batch_size": 32,
+    "use_weighted_sampler": False
 }
 

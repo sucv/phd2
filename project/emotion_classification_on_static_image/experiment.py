@@ -33,7 +33,7 @@ class Experiment(GenericExperiment):
             self.fold_to_run = [0]
 
         self.save_model = args.save_model
-        self.model_name = args.model_name + "_" + args.dataset
+        self.model_name = args.model_name + "_" + args.dataset + "_" + self.stamp
         self.model_mode = args.model_mode
         self.learning_rate = args.learning_rate
         self.min_learning_rate = args.min_learning_rate
@@ -47,7 +47,6 @@ class Experiment(GenericExperiment):
 
         self.milestone = [0]
         self.release_count = args.release_count
-
 
     def init_model(self):
 
@@ -146,13 +145,19 @@ class Experiment(GenericExperiment):
                 test_dataset = ImageFolder(os.path.join(self.config['remote_root_directory'], 'test'),
                                            transform=transform_val)
 
-        sampler, sample_weights = init_weighted_sampler_and_weights(train_dataset)
+        sampler, sample_weights = None, None
+        if 'use_weighted_sampler' in self.config and self.config['use_weighted_sampler']:
+            sampler, sample_weights = init_weighted_sampler_and_weights(train_dataset)
 
-        train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.config['batch_size'], sampler=sampler)
-        validate_loader = data.DataLoader(dataset=validate_dataset, batch_size=self.config['batch_size'], shuffle=False)
+        if sampler is None:
+            train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.config['batch_size'], shuffle=True)
+        else:
+            train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.config['batch_size'], sampler=sampler)
+
+        validate_loader = data.DataLoader(dataset=validate_dataset, batch_size=self.config['batch_size'])
         test_loader = None
         if test_dataset is not None:
-            test_loader = data.DataLoader(dataset=test_dataset, batch_size=self.config['batch_size'], shuffle=False)
+            test_loader = data.DataLoader(dataset=test_dataset, batch_size=self.config['batch_size'])
 
         dataloader_dict = {'train': train_loader, 'validate': validate_loader, 'test': test_loader}
         return dataloader_dict, sample_weights
@@ -161,7 +166,7 @@ class Experiment(GenericExperiment):
         device = self.init_device()
         fold_list_origin = None
 
-        save_path = os.path.join(self.model_save_path, self.model_name + "_" + self.stamp)
+        save_path = os.path.join(self.model_save_path, self.model_name)
 
         if self.cross_validation:
             arranger = self.init_arranger()
@@ -171,6 +176,8 @@ class Experiment(GenericExperiment):
 
         for fold in iter(self.fold_to_run):
             fold_save_path = os.path.join(save_path, str(fold))
+            os.makedirs(fold_save_path, exist_ok=True)
+
             checkpoint_filename = os.path.join(fold_save_path, "checkpoint.pkl")
 
             dataloader_dict, samples_weights = self.init_dataloader(transform_dict=transform_dict, fold=fold,
@@ -180,11 +187,16 @@ class Experiment(GenericExperiment):
             milestone = self.milestone
 
             trainer = ImageClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path,
-                                                 criterion=criterion, num_classes=self.config['num_classes'], device=device,
-                                                 learning_rate=self.learning_rate, fold=fold, milestone=milestone, patience=self.patience,
-                                                 early_stopping=self.early_stopping, min_learning_rate=self.min_learning_rate, samples_weight=samples_weights)
+                                                 criterion=criterion, num_classes=self.config['num_classes'],
+                                                 device=device,
+                                                 learning_rate=self.learning_rate, fold=fold, milestone=milestone,
+                                                 patience=self.patience,
+                                                 early_stopping=self.early_stopping,
+                                                 min_learning_rate=self.min_learning_rate,
+                                                 samples_weight=samples_weights)
 
-            parameter_controller = ParamControl(trainer, release_count=self.release_count)
+            parameter_controller = ParamControl(trainer, release_count=self.release_count,
+                                                backbone_mode=self.model_mode)
             checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 
             if self.resume:

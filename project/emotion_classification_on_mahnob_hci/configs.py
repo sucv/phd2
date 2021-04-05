@@ -14,11 +14,11 @@ config_mahnob = {
         "continuous_label": 1
     },
     "window_length": 24,
-    "hop_size": 8,
+    "hop_size": 24,
     "continuous_label_frequency": 4,
     "frame_size": 48,
     "crop_size": 40,
-    "batch_size": 2,
+    "batch_size": 3,
     "filename_pattern": {
         "continuous_label": "lable_continous_Mahnob.mat",
         "video": "P{}.+Section_{}.avi",

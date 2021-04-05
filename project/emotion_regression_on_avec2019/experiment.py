@@ -115,6 +115,8 @@ class Experiment(GenericExperiment):
     def experiment(self):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
+        os.makedirs(save_path, exist_ok=True)
+
         checkpoint_filename = os.path.join(save_path, "checkpoint.pkl")
 
         model = self.init_model()
@@ -127,7 +129,7 @@ class Experiment(GenericExperiment):
                                   emotional_dimension=self.emotion_dimension, head=self.head,
                                   milestone=self.milestone, criterion=criterion, verbose=True, device=self.device)
 
-        parameter_controller = ParamControl(trainer, release_count=self.release_count)
+        parameter_controller = ParamControl(trainer, release_count=self.release_count, backbone_mode=self.backbone_mode)
 
         checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 

@@ -149,3 +149,37 @@ class Backbone(Module):
         x = self.body(x)
         x = self.output_layer(x)
         return l2_norm(x)
+
+
+class Backbone_Eeg(Module):
+    def __init__(self, num_layers, drop_ratio, mode='ir'):
+        super(Backbone_Eeg, self).__init__()
+        assert num_layers in [50, 100, 152], 'num_layers should be 50,100, or 152'
+        assert mode in ['ir', 'ir_se'], 'mode should be ir or ir_se'
+        blocks = get_blocks(num_layers)
+        if mode == 'ir':
+            unit_module = bottleneck_IR
+        elif mode == 'ir_se':
+            unit_module = bottleneck_IR_SE
+        self.input_layer = Sequential(Conv2d(5, 64, (3, 3), 1, 1, bias=False),
+                                      BatchNorm2d(64),
+                                      PReLU(64))
+        self.output_layer = Sequential(BatchNorm2d(512),
+                                       Dropout(drop_ratio),
+                                       Flatten(),
+                                       Linear(512 * 7 * 7, 512),
+                                       BatchNorm1d(512))
+        modules = []
+        for block in blocks:
+            for bottleneck in block:
+                modules.append(
+                    unit_module(bottleneck.in_channel,
+                                bottleneck.depth,
+                                bottleneck.stride))
+        self.body = Sequential(*modules)
+
+    def forward(self, x):
+        x = self.input_layer(x)
+        x = self.body(x)
+        x = self.output_layer(x)
+        return l2_norm(x)

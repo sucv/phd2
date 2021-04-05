@@ -6,18 +6,20 @@ import numpy as np
 
 
 class ParamControl(GenericParamControl):
-    def __init__(self, trainer, release_count=8):
+    def __init__(self, trainer, release_count=8, backbone_mode="ir"):
         self.trainer = trainer
         self.release_count = release_count
+        self.backbone_mode = backbone_mode
         self.module_list = self.init_module_list()
         self.module_stack = self.init_param_group()
 
-    @staticmethod
-    def init_module_list():
-        # return [[(4, 10), (163, 187)], [(142, 163)], [(121, 142)]]
-        return [[(4, 10)], [(163, 187)], [(142, 163)]]
+    def init_module_list(self):
 
-        # return [[(4, 10), (205, 235)], [(187, 205)], [(169, 187)]]
+        module_list = [[(4, 10), (163, 187)], [(142, 163)], [(121, 142)]]
+        if self.backbone_mode == "ir_se":
+            module_list = [[(4, 10), (205, 235)], [(187, 205)], [(169, 187)]]
+
+        return module_list
 
     def init_param_group(self):
         # return {'0': slice(151, 160), '1': slice(160, 169), '2': slice(169, 178),

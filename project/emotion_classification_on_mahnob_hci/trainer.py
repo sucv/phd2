@@ -1,20 +1,22 @@
 from base.trainer import GenericTrainer
-from project.emotion_classification_on_static_image.parameter_control import ParamControl
+from base.output import ContinuousOutputHandlerNPY
+from base.metric import ContinuousMetricsCalculator
+from base.output import PlotHandler
 
+import os
 import time
 import copy
 from tqdm import tqdm
 
-import os
+import pandas as pd
 import numpy as np
 import torch
 from torch import optim
-import torch.utils.data
 from sklearn.metrics import accuracy_score
 
 
-class ImageClassificationTrainer(GenericTrainer):
-    def __init__(self, model, model_name='', save_path='', milestone=[0], fold=0, max_epoch=2000,
+class MAHNOBClassificationTrainer(GenericTrainer):
+    def __init__(self, model, model_name='', save_path='', milestone=[0], modality=['frame'], fold=0, max_epoch=2000,
                  criterion=None, learning_rate=0.001, device='cpu', num_classes=6, patience=20, early_stopping=100,
                  verbose=True, min_learning_rate=1e-5, **kwargs):
         super().__init__(model, model_name=model_name, save_path=save_path, criterion=criterion, min_learning_rate=min_learning_rate,
@@ -27,6 +29,7 @@ class ImageClassificationTrainer(GenericTrainer):
 
         self.fold = fold
         self.milestone = milestone
+        self.modality = modality
 
         # parameter_control
         self.fit_finished = False
@@ -96,14 +99,14 @@ class ImageClassificationTrainer(GenericTrainer):
 
             time_epoch_start = time.time()
 
-            if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
-                # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
-                if parameter_controller.release_count == 0:
-                    print("No more layers to release, early-stop!")
-                    break
-
-                parameter_controller.release_param()
-                # self.model.load_state_dict(self.best_epoch_info['model_weights'])
+            # if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
+            #     # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
+            #     if parameter_controller.release_count == 0:
+            #         print("No more layers to release, early-stop!")
+            #         break
+            #
+            #     parameter_controller.release_param()
+            #     # self.model.load_state_dict(self.best_epoch_info['model_weights'])
 
             print("There are {} layers to update.".format(len(self.optimizer.param_groups[0]['params'])))
 
@@ -188,10 +191,17 @@ class ImageClassificationTrainer(GenericTrainer):
 
         # self.base_model.load_state_dict(state_dict=torch.load(self.model_path))
 
-        for batch_index, (X, Y) in tqdm(enumerate(data_loader), total=len(data_loader)):
-            inputs = X.to(self.device)
+        for batch_index, (X, Y, _, _) in tqdm(enumerate(data_loader), total=len(data_loader)):
+
+            if 'frame' in X:
+                inputs = X['frame'].to(self.device)
+
+            if 'eeg_image' in X:
+                inputs = X['eeg_image'].to(self.device)
 
             labels = torch.squeeze(Y.long().to(self.device))
+            if len(labels.shape) == 0:
+                labels = labels.unsqueeze(0)
 
             if train_mode:
                 self.optimizer.zero_grad()
@@ -212,4 +222,6 @@ class ImageClassificationTrainer(GenericTrainer):
         epoch_loss = running_loss / len(y_true)
         epoch_acc = accuracy_score(y_true, y_pred)
         epoch_confusion_matrix = self.calculate_confusion_matrix(y_pred, y_true)
+
         return epoch_loss, np.round(epoch_acc.item(), 3), epoch_confusion_matrix
+

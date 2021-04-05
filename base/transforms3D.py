@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 import numbers
 import torch
-
+from sklearn.decomposition import PCA
 
 class GroupNumpyToPILImage(object):
     def __init__(self, use_inverse):
@@ -78,6 +78,43 @@ class GroupRandomHorizontalFlip(object):
             return ret
         else:
             return img_group
+
+def augment_EEG(data, stdMult, pca=False, n_components=2):
+    """
+    source url: https://github.com/pbashivan/EEGLearn/blob/master/eeglearn/utils.py
+    Augment data by adding normal noise to each feature.
+    :param data: EEG feature data as a matrix (n_samples x n_features)
+    :param stdMult: Multiplier for std of added noise
+    :param pca: if True will perform PCA on data and add noise proportional to PCA components.
+    :param n_components: Number of components to consider when using PCA.
+    :return: Augmented data as a matrix (n_samples x n_features)
+    """
+    augData = np.zeros(data.shape)
+
+    pca = PCA(n_components=n_components)
+    pca.fit(data)
+    components = pca.components_
+    variances = pca.explained_variance_ratio_
+    coeffs = np.random.normal(scale=stdMult, size=pca.n_components) * variances
+    for s, sample in enumerate(data):
+        augData[s, :] = sample + (components * coeffs.reshape((n_components, -1))).sum(axis=0)
+    return augData
+
+
+class GroupWhiteNoiseByPCA(object):
+    def __init__(self, std_multiplier, num_components):
+        self.std_multiplier = std_multiplier
+        self.num_components = num_components
+
+    def __call__(self, img_group):
+        augData = np.zeros((img_group.shape[0], img_group.shape[1] * img_group.shape[2], img_group.shape[3]))
+
+        for c in range(img_group.shape[3]):
+            reshData = np.reshape(img_group[:, :, :, c], (img_group.shape[0], -1))
+
+            augData[:, :, c] = augment_EEG(reshData, self.std_multiplier, pca=True, n_components=self.num_components)
+
+        return np.reshape(augData, img_group.shape)
 
 
 class GroupNormalize(object):
