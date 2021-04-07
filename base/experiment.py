@@ -19,7 +19,6 @@ class GenericExperiment(object):
         self.config = self.load_config()
         self.init_random_seed()
 
-        # If None, it is usually for running on High-Performance Computing Server.
         self.gpu = args.gpu
         self.cpu = args.cpu
         # If the code is to run on high-performance computer, which is usually not

@@ -15,13 +15,13 @@ import torch.utils.data
 
 
 class AVEC2019Trainer(GenericTrainer):
-    def __init__(self, model, model_name='2d1d', save_path=None, train_emotion='both', head='multi-headed',
+    def __init__(self, model, model_name='2d1d', save_path=None, train_emotion='both', head='multi-headed', factor=0.1,
                  early_stopping=100, criterion=None, milestone=[0], patience=10, learning_rate=0.00001, device='cpu',
                  emotional_dimension=None, metrics=None, verbose=False, print_training_metric=False, **kwargs):
 
         # The device to use.
         super().__init__(model, model_name=model_name, save_path=save_path, criterion=criterion, learning_rate=learning_rate,
-                         early_stopping=early_stopping, device=device, patience=patience, verbose=verbose, **kwargs)
+                         early_stopping=early_stopping, device=device, patience=patience, factor=factor, verbose=verbose, **kwargs)
         self.device = device
 
         # Whether to show the information strings.

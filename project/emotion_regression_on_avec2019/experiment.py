@@ -46,6 +46,7 @@ class Experiment(GenericExperiment):
         self.time_delay = args.time_delay
         self.num_epochs = args.num_epochs
         self.min_num_epochs = args.min_num_epochs
+        self.factor = args.factor
 
         self.release_count = args.release_count
         self.device = self.init_device()
@@ -120,12 +121,13 @@ class Experiment(GenericExperiment):
         checkpoint_filename = os.path.join(save_path, "checkpoint.pkl")
 
         model = self.init_model()
+        model.init()
         dataloader_dict, length_dict = self.init_dataloader()
         criterion = CCCLoss()
 
         trainer = AVEC2019Trainer(model, model_name=self.model_name, learning_rate=self.learning_rate,
                                   metrics=self.config['metrics'], save_path=save_path, early_stopping=20,
-                                  train_emotion=self.train_emotion, patience=self.patience,
+                                  train_emotion=self.train_emotion, patience=self.patience, factor=self.factor,
                                   emotional_dimension=self.emotion_dimension, head=self.head,
                                   milestone=self.milestone, criterion=criterion, verbose=True, device=self.device)
 

@@ -4,10 +4,10 @@ import argparse
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="avec2019_regression", help='The experiment name.')
-    parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
-    parser.add_argument('-high_performance_cluster', default=0, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='0929', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
+    parser.add_argument('-stamp', default='test4', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='avec2019', type=str, help='The dataset name.')
 
     # Dataset
@@ -23,10 +23,10 @@ if __name__ == '__main__':
 
     # Models
     parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm')
-    parser.add_argument('-backbone_state_dict', default="state_dict_0.869", help='The filename for the backbone state dict.')
+    parser.add_argument('-backbone_state_dict', default="model_state_dict_0.901", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
-    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
+    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128, 128], nargs="+", type=int, help='The size for each channel')
     parser.add_argument('-cnn1d_kernel_size', default=5, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 

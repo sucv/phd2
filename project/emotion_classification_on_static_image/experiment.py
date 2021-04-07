@@ -3,8 +3,8 @@ from base.utils import init_weighted_sampler_and_weights
 from base.loss_function import FocalLoss
 from project.emotion_classification_on_static_image.dataset import CKplusArranger, OuluArranger, RafdArranger, \
     EmotionalStaticImgClassificationDataset
-from project.emotion_classification_on_static_image.checkpointer import Checkpointer
-from project.emotion_classification_on_static_image.trainer import ImageClassificationTrainer
+from base.checkpointer import ClassificationCheckpointer
+from project.emotion_classification_on_static_image.trainer import Trainer
 from project.emotion_classification_on_static_image.parameter_control import ParamControl
 from models.model import my_res50
 
@@ -186,18 +186,18 @@ class Experiment(GenericExperiment):
             criterion = FocalLoss()
             milestone = self.milestone
 
-            trainer = ImageClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path,
-                                                 criterion=criterion, num_classes=self.config['num_classes'],
-                                                 device=device,
-                                                 learning_rate=self.learning_rate, fold=fold, milestone=milestone,
-                                                 patience=self.patience,
-                                                 early_stopping=self.early_stopping,
-                                                 min_learning_rate=self.min_learning_rate,
-                                                 samples_weight=samples_weights)
+            trainer = Trainer(model, model_name=self.model_name, save_path=fold_save_path,
+                              criterion=criterion, num_classes=self.config['num_classes'],
+                              device=device, factor=self.factor,
+                              learning_rate=self.learning_rate, fold=fold, milestone=milestone,
+                              patience=self.patience, early_stopping=self.early_stopping,
+                              min_learning_rate=self.min_learning_rate,
+                              samples_weight=samples_weights)
 
             parameter_controller = ParamControl(trainer, release_count=self.release_count,
                                                 backbone_mode=self.model_mode)
-            checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
+            checkpoint_controller = ClassificationCheckpointer(checkpoint_filename, trainer, parameter_controller,
+                                                               resume=self.resume)
 
             if self.resume:
                 trainer, parameter_controller = checkpoint_controller.load_checkpoint()

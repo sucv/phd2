@@ -12,7 +12,7 @@ class Checkpointer(GenericCheckpointer):
         super().__init__(path, trainer, parameter_controller, resume)
         self.columns = []
 
-    def save_log_to_csv(self, epoch=0, mean_train_record=None, mean_validate_record=None, test_record=None):
+    def save_log_to_csv(self, epoch=None, mean_train_record=None, mean_validate_record=None, test_record=None):
 
         if epoch is not None:
             num_layers_to_update = len(self.trainer.optimizer.param_groups[0]['params'])
@@ -24,7 +24,7 @@ class Checkpointer(GenericCheckpointer):
                            mean_validate_record['Valence']['pcc'][0][1], mean_validate_record['Valence']['ccc'][0]]
         else:
             csv_records = ["Test results:", "rmse: ", test_record['Valence']['rmse'][0],
-                           "pcc: ", test_record['Valence']['pcc'][0][0], test_record['Valence']['rmse'][0][1],
+                           "pcc: ", test_record['Valence']['pcc'][0][0], test_record['Valence']['pcc'][0][1],
                            "ccc: ", test_record['Valence']['ccc'][0]]
 
         row_df = pd.DataFrame(data=csv_records)

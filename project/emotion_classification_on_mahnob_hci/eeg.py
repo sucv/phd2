@@ -18,7 +18,6 @@ class EegMahnob(GenericEegController):
 
         self.filtered_raw_eeg, self.eeg_images = self.preprocessing()
 
-
     def calculate_psd(self, data):
         data_np = data[:][0]
         power_spectram_densities = []

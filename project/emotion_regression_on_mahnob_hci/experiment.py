@@ -1,10 +1,10 @@
 from base.experiment import GenericExperiment
-from models.model import my_2d1d, my_2dlstm, my_res50_tempool
-from project.emotion_regression_on_mahnob_hci.dataset import NFoldMahnobArranger, MAHNOBDataset
+from models.model import my_2d1d, my_2dlstm
+from base.dataset import NFoldMahnobArranger, MAHNOBDataset
 from project.emotion_regression_on_mahnob_hci.checkpointer import Checkpointer
-from project.emotion_regression_on_mahnob_hci.trainer import MAHNOBRegressionTrainer, MAHNOBClassificationTrainer
+from project.emotion_regression_on_mahnob_hci.trainer import MAHNOBRegressionTrainer
 from project.emotion_regression_on_mahnob_hci.parameter_control import ParamControl
-from base.utils import load_single_pkl
+
 from base.loss_function import CCCLoss
 
 import os
@@ -25,17 +25,10 @@ class Experiment(GenericExperiment):
 
         self.stamp = args.stamp
 
-        self.job = args.job
-        if args.job == 0:
-            self.job = "reg_v"
-        elif args.job == 1:
-            self.job = "cls_v"
-
-        self.model_name = self.experiment_name + "_" + args.model_name + "_" + self.job
-
         self.modality = args.modality
-
-        self.backbone_state_dict = args.backbone_state_dict
+        self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[0]
+        self.backbone_state_dict_frame = args.backbone_state_dict_frame
+        self.backbone_state_dict_eeg = args.backbone_state_dict_eeg
         self.backbone_mode = args.backbone_mode
 
         self.cnn1d_embedding_dim = args.cnn1d_embedding_dim
@@ -54,6 +47,7 @@ class Experiment(GenericExperiment):
         self.time_delay = args.time_delay
         self.num_epochs = args.num_epochs
         self.min_num_epochs = args.min_num_epochs
+        self.factor = args.factor
 
         self.release_count = args.release_count
         self.device = self.init_device()
@@ -62,7 +56,7 @@ class Experiment(GenericExperiment):
         from project.emotion_regression_on_mahnob_hci.configs import config_mahnob as config
         return config
 
-    def init_model(self):
+    def create_model(self):
         # # Here we initialize the model. It contains the spatial block and temporal block.
         # FRAME_DIM = 96
         # TIME_DEPTH = 300
@@ -84,33 +78,28 @@ class Experiment(GenericExperiment):
         # )
 
         output_dim = 1
+        if "eeg_image" in self.modality:
+            backbone_state_dict = self.backbone_state_dict_eeg
+        elif "frame" in self.modality:
+            backbone_state_dict = self.backbone_state_dict_frame
+        else:
+            raise ValueError("Unsupported modality!")
 
         if "2d1d" in self.model_name:
-            model_visual = my_2d1d(backbone_state_dict=self.backbone_state_dict, backbone_mode=self.backbone_mode,
+            model = my_2d1d(backbone_state_dict=backbone_state_dict, backbone_mode=self.backbone_mode,
                             embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
+                            modality=self.modality,
                             output_dim=output_dim, kernel_size=self.cnn1d_kernel_size,
                             dropout=self.cnn1d_dropout, root_dir=self.model_load_path)
-
         elif "2dlstm" in self.model_name:
-            model_visual = my_2dlstm(backbone_state_dict=self.backbone_state_dict, backbone_mode=self.backbone_mode,
+            model = my_2dlstm(backbone_state_dict=backbone_state_dict, backbone_mode=self.backbone_mode,
                               embedding_dim=self.lstm_embedding_dim, hidden_dim=self.lstm_hidden_dim,
+                              modality=self.modality,
                               output_dim=output_dim, dropout=self.lstm_dropout,
                               root_dir=self.model_load_path)
         else:
-            raise ValueError("Unknown base_model!")
-
-        model_eeg = my_res50_tempool(backbone_mode="ir", embedding_dim=512, output_dim=3,  root_dir='')
-
-        models_dict = {"visual": model_visual, "eeg": model_eeg}
-        return models_dict
-
-    def init_class_label(self):
-
-        class_labels = None
-        if self.job == "cls_v":
-            class_labels = load_single_pkl(self.config['remote_root_directory'], "class_label")
-
-        return class_labels
+            raise ValueError("Unsupported model!")
+        return model
 
     def init_partition_dictionary(self):
         if self.num_folds == 3:
@@ -126,7 +115,7 @@ class Experiment(GenericExperiment):
 
         return partition_dictionary
 
-    def init_dataloader(self, subject_id_of_all_folds, fold_arranger, fold, class_labels):
+    def init_dataloader(self, subject_id_of_all_folds, fold_arranger, fold, class_labels=None):
 
         # Set the fold-to-partition configuration.
         # Each fold have approximately the same number of sessions.
@@ -152,11 +141,10 @@ class Experiment(GenericExperiment):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
 
-        fold_arranger = NFoldMahnobArranger(self.config, job=self.job, modality=self.modality)
+        fold_arranger = NFoldMahnobArranger(
+            self.config, include_session_having_no_continuous_label=False, modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
-        subject_id_of_all_folds = [[1, 6, 3], [2, 9, 16], [4, 25, 10], [5, 7, 8], [13, 14, 17], [18, 19, 20], [21, 22], [23, 24], [27, 28], [29, 30]]
-        class_labels = self.init_class_label()
-        models_dict = self.init_model()
+        model = self.create_model()
         criterion = CCCLoss()
 
         # Here goes the N-fold training.
@@ -168,21 +156,18 @@ class Experiment(GenericExperiment):
             os.makedirs(fold_save_path, exist_ok=True)
             checkpoint_filename = os.path.join(fold_save_path, "checkpoint.pkl")
 
-            dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold, class_labels)
+            model.init(fold)
+            dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
 
-            if self.job == "reg_v":
-                trainer = MAHNOBRegressionTrainer(models_dict['visual'], stamp=self.stamp, model_name=self.model_name,
-                                                  learning_rate=self.learning_rate, metrics=self.config['metrics'],
-                                                  save_path=fold_save_path, early_stopping=self.early_stopping, patience=self.patience,
-                                                  milestone=self.milestone, criterion=criterion, verbose=True, device=self.device)
-            else:
-                trainer = MAHNOBClassificationTrainer(models_dict, model_name=self.model_name, save_path=fold_save_path,
-                                                 criterion=criterion, num_classes=self.config['num_classes'], device=self.device,
-                                                 learning_rate=self.learning_rate, fold=fold, milestone=self.milestone,
-                                                 patience=self.patience, early_stopping=self.early_stopping,
-                                                 min_learning_rate=self.min_learning_rate, samples_weight=None)
+            trainer = MAHNOBRegressionTrainer(model, stamp=self.stamp, model_name=self.model_name,
+                                              learning_rate=self.learning_rate, metrics=self.config['metrics'],
+                                              save_path=fold_save_path, early_stopping=self.early_stopping,
+                                              patience=self.patience, factor=self.factor,
+                                              milestone=self.milestone, criterion=criterion, verbose=True,
+                                              device=self.device)
 
-            parameter_controller = ParamControl(trainer, release_count=self.release_count, backbone_mode=self.backbone_mode)
+            parameter_controller = ParamControl(trainer, release_count=self.release_count,
+                                                backbone_mode=self.backbone_mode)
             checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 
             if self.resume:
@@ -190,15 +175,10 @@ class Experiment(GenericExperiment):
             else:
                 checkpoint_controller.init_csv_logger(self.args, self.config)
 
-            if self.job == "reg_v":
-                trainer.fit(dataloaders_dict, lengths_dict, num_epochs=self.num_epochs, min_num_epoch=self.min_num_epochs,
-                            save_model=True, parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
+            trainer.fit(dataloaders_dict, lengths_dict, num_epochs=self.num_epochs, min_num_epoch=self.min_num_epochs,
+                        save_model=True, parameter_controller=parameter_controller,
+                        checkpoint_controller=checkpoint_controller)
 
-                trainer.test(dataloaders_dict['test'], lengths_dict['test'], checkpoint_controller)
-            else:
-                trainer.fit(dataloaders_dict, num_epochs=self.num_epochs, topk_accuracy=1,
-                            min_num_epochs=self.min_num_epochs, save_model=True,
-                            parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
-                trainer.test(data_to_load=dataloaders_dict, topk_accuracy=1, checkpoint_controller=checkpoint_controller)
+            trainer.test(dataloaders_dict, lengths_dict, checkpoint_controller)
 
             checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)

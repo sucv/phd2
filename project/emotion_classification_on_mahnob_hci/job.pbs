@@ -54,5 +54,5 @@ cd "$PBS_O_WORKDIR" || exit $?
 ### are provided below.
 
 singularity run --nv --bind ~/scratch/dataset:/media/ \
-        ~/scratch/pth_er.sif python ~/phd2/project/emotion_regression_on_mahnob_hci/main.py \
-        -folds_to_run $fr -stamp $s  -resume $r -high_performance_cluster $hpc> output/main_log
+        ~/scratch/pth_er.sif python ~/phd2/project/emotion_classification_on_mahnob_hci/main.py \
+        -folds_to_run $fr -stamp $s  -resume $r  output/main_log

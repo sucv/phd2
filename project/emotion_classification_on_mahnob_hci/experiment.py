@@ -1,8 +1,8 @@
 from base.experiment import GenericExperiment
 from models.model import my_res50_tempool
-from project.emotion_classification_on_mahnob_hci.dataset import NFoldMahnobArranger, MAHNOBDataset
-from project.emotion_classification_on_mahnob_hci.checkpointer import Checkpointer
-from project.emotion_classification_on_mahnob_hci.trainer import MAHNOBClassificationTrainer
+from base.dataset import NFoldMahnobArranger, MAHNOBDataset
+from base.checkpointer import ClassificationCheckpointer
+from base.trainer import ClassificationTrainer
 from project.emotion_classification_on_mahnob_hci.parameter_control import ParamControl
 from base.utils import load_single_pkl
 
@@ -24,23 +24,13 @@ class Experiment(GenericExperiment):
 
         self.stamp = args.stamp
 
-        self.job = args.job
-        self.job = "cls_v"
+        self.include_session_having_no_continuous_label = args.include_session_having_no_continuous_label
 
-        self.model_name = self.experiment_name + "_" + args.model_name + "_" + self.job
+        self.model_name = self.experiment_name + "_" + args.model_name + "_cls_v"
 
         self.modality = args.modality
 
-        self.backbone_state_dict = args.backbone_state_dict
         self.backbone_mode = args.backbone_mode
-
-        self.cnn1d_embedding_dim = args.cnn1d_embedding_dim
-        self.cnn1d_channels = args.cnn1d_channels
-        self.cnn1d_kernel_size = args.cnn1d_kernel_size
-        self.cnn1d_dropout = args.cnn1d_dropout
-        self.lstm_embedding_dim = args.lstm_embedding_dim
-        self.lstm_hidden_dim = args.lstm_hidden_dim
-        self.lstm_dropout = args.lstm_dropout
 
         self.milestone = args.milestone
         self.learning_rate = args.learning_rate
@@ -50,6 +40,7 @@ class Experiment(GenericExperiment):
         self.time_delay = args.time_delay
         self.num_epochs = args.num_epochs
         self.min_num_epochs = args.min_num_epochs
+        self.factor = args.factor
 
         self.release_count = args.release_count
         self.device = self.init_device()
@@ -79,15 +70,13 @@ class Experiment(GenericExperiment):
         #     dropout_rate_1=DROPOUT_RATE_1, dropout_rate_2=DROPOUT_RATE_2
         # )
 
-        model_eeg = my_res50_tempool(backbone_mode="ir", embedding_dim=512, output_dim=3, root_dir='')
+        model_eeg = my_res50_tempool(
+            backbone_mode=self.backbone_mode, embedding_dim=512, output_dim=self.config['num_classes'], root_dir='')
         return model_eeg
 
     def init_class_label(self):
 
-        class_labels = None
-        if self.job == "cls_v":
-            class_labels = load_single_pkl(self.config['remote_root_directory'], "class_label")
-
+        class_labels = load_single_pkl(self.config['remote_root_directory'], "class_label")
         return class_labels
 
     def init_partition_dictionary(self):
@@ -122,7 +111,8 @@ class Experiment(GenericExperiment):
             dataset = MAHNOBDataset(self.config, data_dict[partition], modality=self.modality,
                                     time_delay=self.time_delay, class_labels=class_labels, mode=partition)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
-                dataset=dataset, batch_size=self.config['batch_size'], shuffle=True if partition == "train" else False)
+                dataset=dataset, batch_size=self.config['batch_size'], shuffle=True if partition == "train" else False,
+                drop_last=True)
 
         return dataloaders_dict, length_dict
 
@@ -130,7 +120,9 @@ class Experiment(GenericExperiment):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
 
-        fold_arranger = NFoldMahnobArranger(self.config, job=self.job, modality=self.modality)
+        fold_arranger = NFoldMahnobArranger(
+            self.config, include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
+            modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
         # subject_id_of_all_folds = [[1, 6, 3], [2, 9, 16], [4, 25, 10], [5, 7, 8], [13, 14, 17], [18, 19, 20], [21, 22],
         #                            [23, 24], [27, 28], [29, 30]]
@@ -150,16 +142,17 @@ class Experiment(GenericExperiment):
             dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold,
                                                                   class_labels)
 
-            trainer = MAHNOBClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path,
-                                                  criterion=criterion, num_classes=self.config['num_classes'],
-                                                  device=self.device, modality=self.modality,
-                                                  learning_rate=self.learning_rate, fold=fold, milestone=self.milestone,
-                                                  patience=self.patience, early_stopping=self.early_stopping,
-                                                  min_learning_rate=self.min_learning_rate, samples_weight=None)
+            trainer = ClassificationTrainer(model, model_name=self.model_name, save_path=fold_save_path,
+                                            criterion=criterion, num_classes=self.config['num_classes'],
+                                            device=self.device, modality=self.modality, factor=self.factor,
+                                            learning_rate=self.learning_rate, fold=fold, milestone=self.milestone,
+                                            patience=self.patience, early_stopping=self.early_stopping,
+                                            min_learning_rate=self.min_learning_rate, samples_weight=None)
 
             parameter_controller = ParamControl(trainer, release_count=self.release_count,
                                                 backbone_mode=self.backbone_mode)
-            checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
+            checkpoint_controller = ClassificationCheckpointer(checkpoint_filename, trainer, parameter_controller,
+                                                               resume=self.resume)
 
             if self.resume:
                 trainer, parameter_controller = checkpoint_controller.load_checkpoint()
