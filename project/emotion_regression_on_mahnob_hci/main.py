@@ -9,7 +9,7 @@ if __name__ == '__main__':
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
     parser.add_argument('-stamp', default='test32', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image')
+    parser.add_argument('-modality', default=['eeg_image'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")

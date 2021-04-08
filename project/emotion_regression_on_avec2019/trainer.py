@@ -61,9 +61,6 @@ class AVEC2019Trainer(GenericTrainer):
         self.csv_filename = None
         self.best_epoch_info = None
 
-    def init_optimizer_and_scheduler(self):
-        self.optimizer = optim.Adam(self.get_parameters(), lr=self.learning_rate, weight_decay=0.001)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience, factor=0.5)
 
     def get_parameters(self):
         r"""

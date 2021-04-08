@@ -75,13 +75,15 @@ class GenericTrainer(object):
         return preds[0]
 
     def calculate_confusion_matrix(self, preds, labels):
-        confusion_matrix = np.zeros((self.num_classes, self.num_classes + 1))
+        confusion_matrix = np.zeros((self.num_classes + 1, self.num_classes + 1))
         for label, pred in zip(labels, preds):
             confusion_matrix[label, pred] += 1
 
+        confusion_matrix[-1, :] = np.sum(confusion_matrix, axis=0)
         confusion_matrix[:, -1] = np.sum(confusion_matrix, axis=1)
-        confusion_matrix[:, :-1] /= confusion_matrix[:, -1][:, np.newaxis]
-        confusion_matrix[:, :-1] = np.around(confusion_matrix[:, :-1], decimals=3)
+
+        confusion_matrix[:-1, :-1] /= confusion_matrix[:-1, -1][:, np.newaxis]
+        confusion_matrix[:-1, :-1] = np.around(confusion_matrix[:-1, :-1], decimals=3)
         return confusion_matrix
 
     def train(self, **kwargs):

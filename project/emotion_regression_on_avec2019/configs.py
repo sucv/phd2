@@ -1,7 +1,7 @@
 frame_size = 48
 crop_size = 40
-window_length = 60
-hop_size = 30
+window_length = 300
+hop_size = 100
 
 config_avec2019 = {
     "program_name": "avec2019",

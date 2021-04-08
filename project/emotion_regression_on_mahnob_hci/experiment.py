@@ -144,6 +144,7 @@ class Experiment(GenericExperiment):
         fold_arranger = NFoldMahnobArranger(
             self.config, include_session_having_no_continuous_label=False, modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
+        print(subject_id_of_all_folds)
         model = self.create_model()
         criterion = CCCLoss()
 

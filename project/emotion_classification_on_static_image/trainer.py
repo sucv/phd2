@@ -5,9 +5,16 @@ from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 import numpy as np
 import torch
+from torch import optim
 
 
 class Trainer(ClassificationTrainer):
+
+    def init_optimizer_and_scheduler(self):
+        self.optimizer = optim.SGD(self.get_parameters(), lr=self.learning_rate, weight_decay=0.001, momentum=0.9)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience,
+                                                                    factor=self.factor)
+
     def loop(self, data_loader, train_mode=True, topk_accuracy=1):
 
         running_loss = 0.0
