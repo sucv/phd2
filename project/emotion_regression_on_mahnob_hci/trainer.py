@@ -66,11 +66,15 @@ class MAHNOBRegressionTrainer(GenericTrainer):
 
     def train(self, data_loader, length_to_track, epoch):
         self.model.train()
-        return self.loop(data_loader, length_to_track, epoch, train_mode=True)
+        loss, result_dict = self.loop(data_loader, length_to_track, epoch,
+                                      train_mode=True)
+        return loss, result_dict
 
     def validate(self, data_loader, length_to_track, epoch):
-        self.model.eval()
-        return self.loop(data_loader, length_to_track, epoch, train_mode=False)
+        with torch.no_grad():
+            self.model.eval()
+            loss, result_dict = self.loop(data_loader, length_to_track, epoch, train_mode=False)
+        return loss, result_dict
 
     def test(
             self,
@@ -106,27 +110,10 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             save_model=False
     ):
 
-        r"""
-        The function to carry out training and validation.
-        :param directory_to_save_checkpoint_and_plot:
-        :param clip_sample_map_to_track:
-        :param data_to_load: (dict), the data in training and validation partitions.
-        :param length_to_track: (dict), the corresponding length of the subjects' sessions.
-        :param fold: the current fold index.
-        :param clipwise_frame_number: (int), how many frames contained in a mp4 file.
-        :param epoch_number: (int), how many epochs to run.
-        :param early_stopping: (int), how many epochs to tolerate before stopping early.
-        :param min_epoch_number: the minimum epochs to run before calculating the early stopping.
-        :param checkpoint: (dict), to save the information once an epoch is done
-        :return: (dict), the metric dictionary recording the output and its associate continuous labels
-            as a long array for each subject.
-        """
-
         if self.fit_finished:
             print("------")
             print("Fitting already finished, proceed to test!", self.device)
             return
-
 
         if self.verbose:
             print("------")
@@ -144,8 +131,12 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         # Loop the epochs
         for epoch in np.arange(start_epoch, num_epochs):
             if parameter_controller.get_current_lr() < 1e-6:
-                # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
+
                 parameter_controller.release_param()
+                self.model.load_state_dict(self.best_epoch_info['model_weights'])
+
+                if parameter_controller.early_stop:
+                    break
 
             time_epoch_start = time.time()
             print("There are {} layers to update.".format(len(self.optimizer.param_groups[0]['params'])))
@@ -229,10 +220,6 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                 epoch, train_record_dict['overall'], validate_record_dict['overall'])
 
             self.scheduler.step(validate_ccc)
-            # if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            #     self.scheduler.step(validate_loss)
-            # else:
-            #     self.scheduler.step()
 
             self.start_epoch = epoch + 1
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)

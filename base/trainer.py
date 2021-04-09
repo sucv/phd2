@@ -180,10 +180,12 @@ class ClassificationTrainer(GenericTrainer):
             time_epoch_start = time.time()
 
             if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
-                # if epoch in [3, 6, 9, 12, 15, 18, 21, 24]:
 
                 parameter_controller.release_param()
                 self.model.load_state_dict(self.best_epoch_info['model_weights'])
+
+                if parameter_controller.early_stop:
+                    break
 
             print("There are {} layers to update.".format(len(self.optimizer.param_groups[0]['params'])))
 

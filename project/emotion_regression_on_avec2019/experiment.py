@@ -28,7 +28,7 @@ class Experiment(GenericExperiment):
             self.head = "multi-headed"
             self.emotion_dimension = ["Arousal", "Valence"]
 
-        self.model_name = self.experiment_name + "_" + args.model_name + "_" + self.train_emotion
+        self.model_name = self.experiment_name + "_" + args.model_name + "_" + self.train_emotion + "_" + self.stamp
         self.backbone_state_dict = args.backbone_state_dict
         self.backbone_mode = args.backbone_mode
 

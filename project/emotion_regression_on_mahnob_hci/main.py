@@ -23,11 +23,11 @@ if __name__ == '__main__':
     # Models
     parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
-    parser.add_argument('-backbone_state_dict_frame', default="state_dict_0.869", help='The filename for the backbone state dict.')
+    parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.901", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v", help='The filename for the backbone state dict.')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
-    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
-    parser.add_argument('-cnn1d_kernel_size', default=5, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
+    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
+    parser.add_argument('-cnn1d_kernel_size', default=7, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 
     parser.add_argument('-lstm_embedding_dim', default=512, type=int, help='Dimensions for LSTM feature vectors.')
@@ -35,14 +35,14 @@ if __name__ == '__main__':
     parser.add_argument('-lstm_dropout', default=0.4, type=float, help='The dropout rate.')
 
     parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
-    parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=500, type=int, help='The total of epochs to run during training.')
-    parser.add_argument('-min_num_epochs', default=10, type=int, help='The minimum epoch to run at least.')
+    parser.add_argument('-min_learning_rate', default=1e-6, type=float, help='The minimum learning rate.')
+    parser.add_argument('-num_epochs', default=100, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-min_num_epochs', default=5, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
     parser.add_argument('-early_stopping', default=20, type=int, help='If no improvement, the number of epoch to run before halting the training')
 
     # Scheduler and Parameter Control
-    parser.add_argument('-patience', default=10, type=int, help='Patience for learning rate changes.')
+    parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
     parser.add_argument('-release_count', default=3, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')

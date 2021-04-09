@@ -26,6 +26,7 @@ class ResnetParamControl(GenericParamControl):
         self.backbone_mode = backbone_mode
         self.module_list = self.init_module_list()
         self.module_stack = self.init_param_group()
+        self.early_stop = False
 
     def init_module_list(self):
 
@@ -69,7 +70,8 @@ class ResnetParamControl(GenericParamControl):
             self.trainer.init_optimizer_and_scheduler()
             self.release_count -= 1
         else:
-            raise ValueError("Early stopped since no further parameters to release!")
+            print("Early stopped since no further parameters to release!")
+            self.early_stop = True
 
     def load_trainer(self, trainer):
         self.trainer = trainer

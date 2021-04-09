@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('-resume', default=0, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[5, 6], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[9], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load', type=str, help='The path to load the trained model.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', default='/home/zhangsu/phd2/save', type=str, help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model

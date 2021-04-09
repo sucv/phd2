@@ -55,4 +55,8 @@ cd "$PBS_O_WORKDIR" || exit $?
 
 singularity run --nv --bind ~/scratch/dataset:/media/ \
         ~/scratch/pth_er.sif python ~/phd2/project/emotion_regression_on_mahnob_hci/main.py \
-        -folds_to_run $fr -stamp $s  -resume $r -high_performance_cluster $hpc> output/main_log
+        -folds_to_run $fr -stamp $s  -resume $r -high_performance_cluster 1 \
+        -model_load_path "/scratch/users/ntu/su012/pretrained_model" \
+        -model_save_path "/scratch/users/ntu/su012/trained_model" \
+        -python_package_path "/home/users/ntu/su012/phd2" \
+        > main_log

@@ -26,7 +26,7 @@ class Experiment(GenericExperiment):
 
         self.include_session_having_no_continuous_label = args.include_session_having_no_continuous_label
 
-        self.model_name = self.experiment_name + "_" + args.model_name + "_cls_v"
+        self.model_name = self.experiment_name + "_" + args.model_name + "_cls_v" + "_" + self.stamp
 
         self.modality = args.modality
 
