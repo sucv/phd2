@@ -22,9 +22,9 @@ config_affectnet = {
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
-    "batch_size": 32,
+    "batch_size": 64,
     "state_dict_setting": state_dict_setting,
-    "use_weighted_sampler": False
+    "use_weighted_sampler": True
 }
 
 config_ckplus = {

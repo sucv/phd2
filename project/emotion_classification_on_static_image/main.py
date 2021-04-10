@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance computing server or not?')
-    parser.add_argument('-stamp', default='try_to_find_best_0407', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
 
     parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load', type=str, help='The path to load the trained model ')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', default='/home/zhangsu/phd2/save', type=str, help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model
@@ -29,12 +29,12 @@ if __name__ == '__main__':
     parser.add_argument('-model_mode', help='Mode: ir, ir_se', default="ir")
     parser.add_argument('-learning_rate', default=1e-3, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=2000, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-num_epochs', default=5000, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-topk_accuracy', default=1, type=int, help='Whether the top k inferences covered the label?')
     parser.add_argument('-min_num_epochs', default=10, type=int, help='The minimum epoch to run at least.')
 
     # Scheduler
-    parser.add_argument('-patience', default=15, type=int, help='The number of epoch to run before changing the learning rate.')
+    parser.add_argument('-patience', default=20, type=int, help='The number of epoch to run before changing the learning rate.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
     parser.add_argument('-early_stopping', default=500, type=int, help='If no improvement, the number of epoch to run before halting the training')
 

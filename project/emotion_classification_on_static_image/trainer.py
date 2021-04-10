@@ -11,7 +11,7 @@ from torch import optim
 class Trainer(ClassificationTrainer):
 
     def init_optimizer_and_scheduler(self):
-        self.optimizer = optim.SGD(self.get_parameters(), lr=self.learning_rate, weight_decay=0.001, momentum=0.9)
+        self.optimizer = optim.SGD(self.get_parameters(), lr=self.learning_rate, weight_decay=0.0001, momentum=0.9)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience,
                                                                     factor=self.factor)
 

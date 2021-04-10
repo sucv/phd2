@@ -14,14 +14,32 @@ class Flatten(Module):
 
 
 class my_res50(nn.Module):
-    def __init__(self, num_classes=8, use_pretrained=True, state_dict_name='', root_dir='', mode="ir",
+    def __init__(self, input_channels=3, num_classes=8, use_pretrained=True, state_dict_name='', root_dir='', mode="ir",
                  embedding_dim=512):
         super().__init__()
-        self.backbone = Backbone(num_layers=50, drop_ratio=0.4, mode=mode)
+        self.backbone = Backbone(input_channels=input_channels, num_layers=50, drop_ratio=0.4, mode=mode)
         if use_pretrained:
             path = os.path.join(root_dir, state_dict_name + ".pth")
             state_dict = torch.load(path, map_location='cpu')
-            self.backbone.load_state_dict(state_dict)
+
+            if "backbone" in list(state_dict.keys())[0]:
+
+                self.backbone.output_layer = Sequential(BatchNorm2d(embedding_dim),
+                                                        Dropout(0.4),
+                                                        Flatten(),
+                                                        Linear(embedding_dim * 5 * 5, embedding_dim),
+                                                        BatchNorm1d(embedding_dim))
+
+                new_state_dict = {}
+                for key, value in state_dict.items():
+
+                    if "logits" not in key:
+                        new_key = key[9:]
+                        new_state_dict[new_key] = value
+
+                self.backbone.load_state_dict(new_state_dict)
+            else:
+                self.backbone.load_state_dict(state_dict)
 
             for param in self.backbone.parameters():
                 param.requires_grad = False
@@ -40,41 +58,16 @@ class my_res50(nn.Module):
         return x
 
 
-class my_res50_eeg(nn.Module):
-    def __init__(self, num_classes=8, use_pretrained=True, state_dict_name='', root_dir='', mode="ir",
-                 embedding_dim=512):
-        super().__init__()
-        self.backbone = Backbone_Eeg(num_layers=50, drop_ratio=0.4, mode=mode)
-        if use_pretrained:
-            path = os.path.join(root_dir, state_dict_name + ".pth")
-            state_dict = torch.load(path, map_location='cpu')
-            self.backbone.load_state_dict(state_dict)
-
-            for param in self.backbone.parameters():
-                param.requires_grad = True
-
-        self.backbone.output_layer = Sequential(BatchNorm2d(embedding_dim),
-                                                Dropout(0.4),
-                                                Flatten(),
-                                                Linear(embedding_dim * 5 * 5, embedding_dim),
-                                                BatchNorm1d(embedding_dim))
-
-        self.logits = nn.Linear(in_features=embedding_dim, out_features=num_classes)
-
-    def forward(self, x):
-        x = self.backbone(x)
-        x = self.logits(x)
-        return x
-
-
 class my_res50_tempool(nn.Module):
-    def __init__(self, backbone_mode="ir", embedding_dim=512, output_dim=1, root_dir=''):
+    def __init__(self, backbone_mode="ir", state_dict_name='', embedding_dim=512, input_channels=5, output_dim=1, root_dir='', use_pretrained=False):
         super().__init__()
 
-        self.backbone = my_res50_eeg(mode=backbone_mode, root_dir=root_dir, use_pretrained=False).backbone
+        self.backbone = my_res50(
+            input_channels=input_channels, mode=backbone_mode, root_dir=root_dir,
+            use_pretrained=use_pretrained, state_dict_name=state_dict_name, ).backbone
+
         self.logits = nn.Linear(in_features=embedding_dim, out_features=output_dim)
         self.temporal_pooling = nn.AvgPool1d(kernel_size=96)
-
 
     def forward(self, x):
         num_batches, length, channel, width, height = x.shape

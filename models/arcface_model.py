@@ -118,7 +118,7 @@ def get_blocks(num_layers):
 
 
 class Backbone(Module):
-    def __init__(self, num_layers, drop_ratio, mode='ir'):
+    def __init__(self, num_layers, drop_ratio, input_channels=3, mode='ir'):
         super(Backbone, self).__init__()
         assert num_layers in [50, 100, 152], 'num_layers should be 50,100, or 152'
         assert mode in ['ir', 'ir_se'], 'mode should be ir or ir_se'
@@ -127,7 +127,7 @@ class Backbone(Module):
             unit_module = bottleneck_IR
         elif mode == 'ir_se':
             unit_module = bottleneck_IR_SE
-        self.input_layer = Sequential(Conv2d(3, 64, (3, 3), 1, 1, bias=False),
+        self.input_layer = Sequential(Conv2d(input_channels, 64, (3, 3), 1, 1, bias=False),
                                       BatchNorm2d(64),
                                       PReLU(64))
         self.output_layer = Sequential(BatchNorm2d(512),
@@ -152,7 +152,7 @@ class Backbone(Module):
 
 
 class Backbone_Eeg(Module):
-    def __init__(self, num_layers, drop_ratio, mode='ir'):
+    def __init__(self, num_layers, drop_ratio, input_channels=5, mode='ir'):
         super(Backbone_Eeg, self).__init__()
         assert num_layers in [50, 100, 152], 'num_layers should be 50,100, or 152'
         assert mode in ['ir', 'ir_se'], 'mode should be ir or ir_se'
@@ -161,7 +161,7 @@ class Backbone_Eeg(Module):
             unit_module = bottleneck_IR
         elif mode == 'ir_se':
             unit_module = bottleneck_IR_SE
-        self.input_layer = Sequential(Conv2d(5, 64, (3, 3), 1, 1, bias=False),
+        self.input_layer = Sequential(Conv2d(input_channels, 64, (3, 3), 1, 1, bias=False),
                                       BatchNorm2d(64),
                                       PReLU(64))
         self.output_layer = Sequential(BatchNorm2d(512),

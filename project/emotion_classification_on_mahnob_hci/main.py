@@ -5,12 +5,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="emotion_video", help='The experiment name.')
     parser.add_argument('-include_session_having_no_continuous_label', default=0, type=int)
-    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='cls_v_0407', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', nargs="*", default=['eeg_image'])
+    parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
@@ -24,6 +24,8 @@ if __name__ == '__main__':
     # Models
     parser.add_argument('-model_name', default="res_eeg", help='Model: res_eeg')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
+    parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.901",
+                        help='The filename for the backbone state dict.')
 
     parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')

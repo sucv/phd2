@@ -86,8 +86,8 @@ class Experiment(GenericExperiment):
         transform = []
         transform.append(Resize(self.config['resize']))
         transform.append(RandomCrop(self.config['center_crop']))
-        transform.append(ColorJitter())
-        transform.append(RandomAffine(degrees=10))
+        # transform.append(ColorJitter())
+        # transform.append(RandomAffine(degrees=10))
         transform.append(RandomHorizontalFlip())
         transform.append(ToTensor())
         transform.append(Normalize(mean=self.config['mean'], std=self.config['std']))

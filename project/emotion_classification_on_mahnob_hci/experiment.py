@@ -26,12 +26,12 @@ class Experiment(GenericExperiment):
 
         self.include_session_having_no_continuous_label = args.include_session_having_no_continuous_label
 
-        self.model_name = self.experiment_name + "_" + args.model_name + "_cls_v" + "_" + self.stamp
+        self.model_name = self.experiment_name + "_" + args.model_name + "_" + self.stamp
 
         self.modality = args.modality
 
         self.backbone_mode = args.backbone_mode
-
+        self.backbone_state_dict_frame = args.backbone_state_dict_frame
         self.milestone = args.milestone
         self.learning_rate = args.learning_rate
         self.min_learning_rate = args.min_learning_rate
@@ -70,9 +70,24 @@ class Experiment(GenericExperiment):
         #     dropout_rate_1=DROPOUT_RATE_1, dropout_rate_2=DROPOUT_RATE_2
         # )
 
-        model_eeg = my_res50_tempool(
-            backbone_mode=self.backbone_mode, embedding_dim=512, output_dim=self.config['num_classes'], root_dir='')
-        return model_eeg
+        if 'eeg_image' in self.modality:
+            input_channels = 5
+            use_pretrained = False
+            root_dir = ''
+            state_dict_name = ''
+        elif 'frame' in self.modality:
+            input_channels = 3
+            use_pretrained = True
+            root_dir = self.model_load_path
+            state_dict_name = self.backbone_state_dict_frame
+        else:
+            raise ValueError("Unsupported modality!")
+
+        model = my_res50_tempool(
+            backbone_mode=self.backbone_mode, embedding_dim=512, input_channels=input_channels,
+            output_dim=self.config['num_classes'], root_dir=root_dir, use_pretrained=use_pretrained, state_dict_name=state_dict_name)
+
+        return model
 
     def init_class_label(self):
 
