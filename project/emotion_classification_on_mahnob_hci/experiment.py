@@ -139,8 +139,9 @@ class Experiment(GenericExperiment):
             self.config, include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
             modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
-        # subject_id_of_all_folds = [[1, 6, 3], [2, 9, 16], [4, 25, 10], [5, 7, 8], [13, 14, 17], [18, 19, 20], [21, 22],
-        #                            [23, 24], [27, 28], [29, 30]]
+        subject_id_of_all_folds = [[1, 6, 3], [2, 9, 16], [4, 25, 10], [5, 7, 8], [13, 14, 17], [18, 19, 20], [21, 22],
+                                   [23, 24], [27, 28], [29, 30]]
+        print(subject_id_of_all_folds)
         class_labels = self.init_class_label()
         model = self.init_model()
         criterion = torch.nn.CrossEntropyLoss()

@@ -4,13 +4,13 @@ import argparse
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="emotion_video", help='The experiment name.')
-    parser.add_argument('-include_session_having_no_continuous_label', default=0, type=int)
-    parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
+    parser.add_argument('-include_session_having_no_continuous_label', default=1, type=int)
+    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='eeg_image_all_data_0411', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image')
+    parser.add_argument('-modality', default=['eeg_image'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
