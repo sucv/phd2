@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('-continuous_label_frequency', default=4, type=int,
                         help='The frequency of the continuous label.')
     parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
-    parser.add_argument('-crop_size', default=40, type=int, help='The size to conduct the cropping.')
+    parser.add_argument('-crop_size', default=crop_size, type=int, help='The size to conduct the cropping.')
     parser.add_argument('-batch_size', default=2, type=int)
 
     # Scheduler and Parameter Control

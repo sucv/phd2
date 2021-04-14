@@ -27,13 +27,13 @@ if __name__ == '__main__':
     parser.add_argument('-folds_to_run', default=None, nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     # Training
-    parser.add_argument('-resume', default=1, type=int, help='Resume from checkpoint?')
+    parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
     parser.add_argument('-dataset', default="ferp_ce", help='Dataset: ckplus, oulu, fer2013, ferp, ferp_ce, rafd, rafdb, affectnet')
     parser.add_argument('-model_name', default="my_res50_ir", help='The name to specify the model.')
     parser.add_argument('-model_mode', default="ir", help='Mode: ir, ir_se')
     parser.add_argument('-learning_rate', default=1e-3, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=2, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-num_epochs', default=7000, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-topk_accuracy', default=1, type=int, help='Whether the top k inferences covered the label?')
     parser.add_argument('-min_num_epochs', default=10, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-use_weighted_sampler', default=1, type=int, help='Whether to balance the samples of each classes using weighted sampler?')
@@ -41,11 +41,11 @@ if __name__ == '__main__':
     # Scheduler
     parser.add_argument('-patience', default=20, type=int, help='The number of epoch to run before changing the learning rate.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
-    parser.add_argument('-early_stopping', default=500, type=int, help='If no improvement, the number of epoch to run before halting the training')
+    parser.add_argument('-early_stopping', default=7000, type=int, help='If no improvement, the number of epoch to run before halting the training')
 
     # Parameter Control
-    parser.add_argument('-release_count', default=4, type=int, help='How many layer groups to release?')
-    parser.add_argument('-milestone', nargs="+", type=int, help='The specific epochs to do something.', default=[0])
+    parser.add_argument('-release_count', default=11, type=int, help='How many layer groups to release?')
+    parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
 
     args = parser.parse_args()
 
