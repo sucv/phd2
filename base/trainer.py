@@ -6,8 +6,9 @@ from tqdm import tqdm
 import numpy as np
 import torch
 from torch import optim
+from torch.nn import MSELoss
 import torch.utils.data
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, cohen_kappa_score
 
 
 class GenericTrainer(object):
@@ -49,7 +50,8 @@ class GenericTrainer(object):
 
     def init_optimizer_and_scheduler(self):
         self.optimizer = optim.Adam(self.get_parameters(), lr=self.learning_rate, weight_decay=0.001)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience, factor=self.factor)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience,
+                                                                    factor=self.factor)
 
     def get_parameters(self):
         r"""
@@ -125,35 +127,41 @@ class ClassificationTrainer(GenericTrainer):
         self.validate_losses = []
         self.train_accuracies = []
         self.validate_accuracies = []
+        self.train_kappas = []
+        self.validate_kappas = []
         self.train_confusion_matrices = []
         self.validate_confusion_matrices = []
         self.test_accuracy = -1
+        self.test_kappa = -1
         self.test_confusion_matrix = 0
         self.csv_filename = ''
         self.best_epoch_info = {}
 
     def train(self, data_loader, topk_accuracy):
         self.model.train()
-        epoch_loss, epoch_acc, epoch_confusion_matrix = self.loop(data_loader=data_loader, train_mode=True,
-                                                                  topk_accuracy=topk_accuracy)
-        return epoch_loss, epoch_acc, epoch_confusion_matrix
+        epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix = self.loop(data_loader=data_loader,
+                                                                               train_mode=True,
+                                                                               topk_accuracy=topk_accuracy)
+        return epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix
 
     def validate(self, data_loader, topk_accuracy):
         with torch.no_grad():
             self.model.eval()
-            epoch_loss, epoch_acc, epoch_confusion_matrix = self.loop(data_loader=data_loader, train_mode=False,
-                                                                      topk_accuracy=topk_accuracy)
-        return epoch_loss, epoch_acc, epoch_confusion_matrix
+            epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix = self.loop(data_loader=data_loader,
+                                                                                   train_mode=False,
+                                                                                   topk_accuracy=topk_accuracy)
+        return epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix
 
     def test(self, data_to_load, topk_accuracy, parameter_controller=None, checkpoint_controller=None):
         if self.verbose:
             print("------")
             print("Starting testing, on device:", self.device)
 
-        _, self.test_accuracy, self.test_confusion_matrix = self.validate(data_to_load['test'], topk_accuracy)
+        _, self.test_accuracy, self.test_kappa, self.test_confusion_matrix = self.validate(data_to_load['test'],
+                                                                                           topk_accuracy)
 
         if self.verbose:
-            print("Test accuracy: {:.3f}".format(self.test_accuracy))
+            print("Test accuracy: {:.3f}, kappa: {:.3f}".format(self.test_accuracy, self.test_kappa))
             print("------")
 
         checkpoint_controller.save_log_to_csv()
@@ -189,14 +197,17 @@ class ClassificationTrainer(GenericTrainer):
 
             print("There are {} layers to update.".format(len(self.optimizer.param_groups[0]['params'])))
 
-            train_loss, train_acc, train_confusion_matrix = self.train(dataloaders_dict['train'], topk_accuracy)
-            validate_loss, validate_acc, validate_confusion_matrix = self.validate(dataloaders_dict['validate'],
-                                                                                   topk_accuracy)
+            train_loss, train_acc, train_kappa, train_confusion_matrix = self.train(
+                dataloaders_dict['train'], topk_accuracy)
+            validate_loss, validate_acc, validate_kappa, validate_confusion_matrix = self.validate(
+                dataloaders_dict['validate'], topk_accuracy)
 
             self.train_losses.append(train_loss)
             self.validate_losses.append(validate_loss)
             self.train_accuracies.append(train_acc)
             self.validate_accuracies.append(validate_acc)
+            self.train_kappas.append(train_kappa)
+            self.validate_kappas.append(validate_kappa)
             self.train_confusion_matrices.append(train_confusion_matrix)
             self.validate_confusion_matrices.append(validate_confusion_matrix)
 
@@ -207,6 +218,7 @@ class ClassificationTrainer(GenericTrainer):
                     'model_weights': copy.deepcopy(self.model.state_dict()),
                     'loss': validate_loss,
                     'acc': validate_acc,
+                    'kappa': validate_kappa,
                     'epoch': epoch,
                     'metrics': {
                         'train_loss': train_loss,
@@ -237,17 +249,20 @@ class ClassificationTrainer(GenericTrainer):
 
             if self.verbose:
                 print(
-                    "Fold {:2} Epoch {:2} in {:.0f}s || Train loss={:.3f}, acc={:.3f}, | Val loss={:.3f}, acc={:.3f}, | LR={:.1e} | best={} | best_acc={} | release_count={:2} | improvement={}-{}".format(
+                    "Fold {:2} Epoch {:2} in {:.0f}s || Train loss={:.3f}, acc={:.3f}, kappa={:.3f} | Val loss={:.3f}, acc={:.3f}, , kappa={:.3f} | LR={:.1e} | best={} | best_acc={} | best_kappa={} | release_count={:2} | improvement={}-{}".format(
                         self.fold,
                         epoch + 1,
                         time.time() - time_epoch_start,
                         train_loss,
                         train_acc,
+                        train_kappa,
                         validate_loss,
                         validate_acc,
+                        validate_kappa,
                         self.optimizer.param_groups[0]['lr'],
                         int(self.best_epoch_info['epoch']) + 1,
                         self.best_epoch_info['acc'],
+                        self.best_epoch_info['kappa'],
                         parameter_controller.release_count,
                         improvement,
                         self.early_stopping_counter)
@@ -255,7 +270,10 @@ class ClassificationTrainer(GenericTrainer):
 
             checkpoint_controller.save_log_to_csv(epoch)
 
-            self.scheduler.step(validate_acc)
+            if isinstance(self.criterion, MSELoss):
+                self.scheduler.step(validate_loss)
+            else:
+                self.scheduler.step(validate_acc)
 
             self.start_epoch = epoch + 1
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
@@ -303,8 +321,7 @@ class ClassificationTrainer(GenericTrainer):
 
         epoch_loss = running_loss / len(y_true)
         epoch_acc = accuracy_score(y_true, y_pred)
+        epoch_kappa = cohen_kappa_score(y_true, y_pred)
         epoch_confusion_matrix = self.calculate_confusion_matrix(y_pred, y_true)
 
-        return epoch_loss, np.round(epoch_acc.item(), 3), epoch_confusion_matrix
-
-
+        return epoch_loss, np.round(epoch_acc.item(), 3), epoch_kappa, epoch_confusion_matrix

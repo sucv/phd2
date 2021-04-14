@@ -1,6 +1,5 @@
 img_size = 48
 crop_size = 40
-state_dict_name = "backbone_ir50_ms1m_epoch120"
 
 state_dict_setting = {
     "ir": "backbone_ir50_ms1m_epoch120",
@@ -8,7 +7,6 @@ state_dict_setting = {
 }
 
 config_affectnet = {
-    "remote_root_directory": "/home/zhangsu/dataset/affectnet/preprocessed",
     "local_root_directory": "E:\\AffectNet",
     "local_image_folder": "Manually_Annotated_Images",
     "local_label_filename_train": "training.csv",
@@ -18,7 +16,6 @@ config_affectnet = {
     "landmark_number": 68,
     "resize": img_size,
     "center_crop": crop_size,
-    "use_pretrained": True,
     "mean": [0.5, 0.5, 0.5],
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
@@ -39,7 +36,6 @@ config_ckplus = {
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
     "batch_size": 32,
-    "use_pretrained": True,
     "state_dict_setting": state_dict_setting,
     "openface_config": {
         "openface_directory": "D:\\OpenFace-master\\x64\\Release\\FeatureExtraction",
@@ -56,10 +52,10 @@ config_ckplus = {
 }
 
 config_ferplus = {
-    "remote_root_directory": "/home/zhangsu/dataset/fer+/preprocessed",
+    "mode": "cross_entropy",
     "local_root_directory": "E:\\fer+",
     "root_csv_filename": "fer2013",
-    "local_output_directory": "E:\\fer+\\preprocessed",
+    "local_output_directory": "E:\\fer+\\cross_entropy",
     "use_pretrained": True,
     "state_dict_setting": state_dict_setting,
     "resize": img_size,

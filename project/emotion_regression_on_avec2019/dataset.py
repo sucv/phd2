@@ -9,8 +9,12 @@ from torchvision.transforms import transforms
 
 
 class AVEC2019Arranger(VideoEmoRegressionArranger):
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, dataset_load_path, dataset_folder, window_length=30, hop_size=10, continuous_label_frequency=10):
+        super().__init__(dataset_load_path=dataset_load_path, dataset_folder=dataset_folder)
+
+        self.window_length = window_length
+        self.hop_size = hop_size
+        self.continuous_label_frequency = continuous_label_frequency
 
     def make_length_dict(self, train_country="all", validate_country="all"):
         length_dict = self.generate_length_dict()
@@ -71,14 +75,14 @@ class AVEC2019Arranger(VideoEmoRegressionArranger):
             #     sampler_length = length
 
             # if partition == "Train":
-            sampler_length = self.window_length
+            sampler_length = self.window_length * self.continuous_label_frequency
             start = 0
             end = start + sampler_length
 
             while end <= length:
                 indices = np.arange(start, end)
                 item_list.append([trial_directory, indices, session])
-                start = start + self.hop_size
+                start = start + self.hop_size * self.continuous_label_frequency
                 end = start + sampler_length
 
             if end > length:
@@ -172,11 +176,11 @@ class AVEC2019Arranger(VideoEmoRegressionArranger):
 
 
 class AVEC2019Dataset(Dataset):
-    def __init__(self, config, data_list, time_delay=0, emotion="a", head="multi-headed", mode='train'):
-        self.config = config
+    def __init__(self, data_list, crop_size=40, frame_to_label_ratio=5, time_delay=0, emotion="a", head="multi-headed", mode='train'):
+        self.crop_size = crop_size
         self.mode = mode
         self.data_list = data_list
-        self.frame_to_label_ratio = config['downsampling_interval_dict']['frame']
+        self.frame_to_label_ratio = frame_to_label_ratio
         self.time_delay = np.int(time_delay * 10)
         self.emotion = emotion
         self.head = head
@@ -230,7 +234,7 @@ class AVEC2019Dataset(Dataset):
         if self.mode == 'train':
             self.transforms = transforms.Compose([
                 transforms3D.GroupNumpyToPILImage(0),
-                transforms3D.GroupCenterCrop(self.config['crop_size']),
+                transforms3D.GroupCenterCrop(self.crop_size),
                 transforms3D.GroupRandomHorizontalFlip(),
                 transforms3D.Stack(),
                 transforms3D.ToTorchFormatTensor(),
@@ -239,7 +243,7 @@ class AVEC2019Dataset(Dataset):
         else:
             self.transforms = transforms.Compose([
                 transforms3D.GroupNumpyToPILImage(0),
-                transforms3D.GroupCenterCrop(self.config['crop_size']),
+                transforms3D.GroupCenterCrop(self.crop_size),
                 transforms3D.Stack(),
                 transforms3D.ToTorchFormatTensor(),
                 normalize

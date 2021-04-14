@@ -13,6 +13,8 @@ class GenericExperiment(object):
         self.args = args
         self.experiment_name = args.experiment_name
         self.dataset = args.dataset
+        self.dataset_load_path = args.dataset_load_path
+        self.dataset_folder = args.dataset_folder
         self.model_load_path = args.model_load_path
         self.model_save_path = args.model_save_path
         self.resume = args.resume

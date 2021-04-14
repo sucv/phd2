@@ -2,19 +2,26 @@ import sys
 import argparse
 
 if __name__ == '__main__':
+    frame_size = 48
+    crop_size = 40
+
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="emotion_video", help='The experiment name.')
     parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='frame_0409', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_image'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[8], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[7], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
+    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
+                        help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
+    parser.add_argument('-dataset_folder', default='compacted_{:d}'.format(frame_size), type=str,
+                        help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
     parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load', type=str, help='The path to load the trained model.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', default='/home/zhangsu/phd2/save', type=str, help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str, help='The path to the entire repository.')
@@ -41,6 +48,20 @@ if __name__ == '__main__':
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
     parser.add_argument('-early_stopping', default=20, type=int, help='If no improvement, the number of epoch to run before halting the training')
 
+    # Groundtruth settings
+    parser.add_argument('-num_classes', default=1, type=int, help='The number of classes for the dataset.')
+    parser.add_argument('-emotion_dimension', default=["Valence"], nargs="*", help='The emotion dimension to analysis.')
+    parser.add_argument('-metrics', default=["rmse", "pcc", "ccc"], nargs="*", help='The evaluation metrics.')
+
+    # Dataloader settings
+    parser.add_argument('-window_length', default=24, type=int, help='The length in second to windowing the data.')
+    parser.add_argument('-hop_size', default=8, type=int, help='The step size or stride to move the window.')
+    parser.add_argument('-continuous_label_frequency', default=4, type=int,
+                        help='The frequency of the continuous label.')
+    parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
+    parser.add_argument('-crop_size', default=40, type=int, help='The size to conduct the cropping.')
+    parser.add_argument('-batch_size', default=2, type=int)
+
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
@@ -49,7 +70,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
-    from project.emotion_regression_on_mahnob_hci.experiment import Experiment
+    from project.emotion_analysis_on_mahnob_hci.regression.experiment import Experiment
 
     experiment_handler = Experiment(args)
     experiment_handler.experiment()

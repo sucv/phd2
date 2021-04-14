@@ -54,11 +54,12 @@ class ClassificationCheckpointer(GenericCheckpointer):
         num_layers_to_update = len(self.trainer.optimizer.param_groups[0]['params'])
 
         if epoch is None:
-            csv_records = ["Test results: ", "accuracy: ", self.trainer.test_accuracy, self.trainer.test_confusion_matrix]
+            csv_records = ["Test results: ", "accuracy: ", self.trainer.test_accuracy, "kappa: ", self.trainer.test_kappa, "conf_mat: ", self.trainer.test_confusion_matrix]
         else:
             csv_records = [time.time(), epoch, int(self.trainer.best_epoch_info['epoch']), num_layers_to_update,
                            self.trainer.optimizer.param_groups[0]['lr'], self.trainer.train_losses[-1],
                            self.trainer.validate_losses[-1], self.trainer.train_accuracies[-1], self.trainer.validate_accuracies[-1],
+                           self.trainer.train_kappas[-1], self.trainer.validate_kappas[-1],
                            self.trainer.train_confusion_matrices[-1], self.trainer.validate_confusion_matrices[-1]]
 
         row_df = pd.DataFrame(data=csv_records)
@@ -81,7 +82,7 @@ class ClassificationCheckpointer(GenericCheckpointer):
         df_config.to_csv(self.trainer.csv_filename, mode='a', index=False)
 
         self.columns = ['time', 'epoch', 'best_epoch', 'layer_to_update', 'lr',
-                        'tr_loss', 'val_loss', 'tr_acc', 'val_acc', 'tr_conf_mat', 'val_conf_mat']
+                        'tr_loss', 'val_loss', 'tr_acc', 'val_acc', 'tr_kappa', 'val_kappa', 'tr_conf_mat', 'val_conf_mat']
 
         df = pd.DataFrame(columns=self.columns)
         df.to_csv(self.trainer.csv_filename, mode='a', index=False)

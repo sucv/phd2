@@ -9,7 +9,7 @@ class EegMahnob(GenericEegController):
         self.filename = filename
         self.buffer = buffer
         self.frequency = 256
-        self.window_sec = 0.75
+        self.window_sec = 2
         self.eeg_image_size = eeg_image_size
         self.step = int(0.25 * self.frequency)
         self.electrode_2d_pos = electrode_2d_pos
@@ -18,14 +18,14 @@ class EegMahnob(GenericEegController):
 
         self.filtered_raw_eeg, self.eeg_images = self.preprocessing()
 
-
     def calculate_psd(self, data):
         data_np = data[:][0]
         power_spectram_densities = []
         start = 0
         end = int(start + self.frequency * self.window_sec)
         while end < data_np.shape[1]:
-            psd = bandpower_multiple(data_np[:, start:end], sampling_frequence=self.frequency, band_sequence=self.interest_bands, window_sec=self.window_sec, relative=True)
+            psd = bandpower_multiple(data_np[:, start:end], sampling_frequence=self.frequency,
+                                     band_sequence=self.interest_bands, window_sec=self.window_sec, relative=True)
             power_spectram_densities.extend(psd)
             start = start + self.step
             end = int(start + self.frequency * self.window_sec)
@@ -49,8 +49,10 @@ class EegMahnob(GenericEegController):
     def create_eeg_image(self, power_spectram_densities):
         power_spectram_densities = power_spectram_densities[np.newaxis, :]
         eeg_images = []
-        for i in range(power_spectram_densities.shape[1] // 160):
-            eeg_image = gen_images(self.electrode_2d_pos, power_spectram_densities[:, i * 160 : (i+1) * 160], self.eeg_image_size, normalize=True)
+        num_psd_per_sample = len(self.interest_bands) * len(self.electrode_2d_pos)
+        for i in range(power_spectram_densities.shape[1] // num_psd_per_sample):
+            eeg_image = gen_images(self.electrode_2d_pos, power_spectram_densities[:, i * num_psd_per_sample: (i + 1) * num_psd_per_sample],
+                                   self.eeg_image_size, normalize=True)
             eeg_images.append(eeg_image)
         eeg_images = np.vstack(eeg_images)
         eeg_images = np.transpose(eeg_images, (0, 2, 3, 1))
@@ -58,7 +60,7 @@ class EegMahnob(GenericEegController):
 
     @staticmethod
     def set_interest_bands():
-        interest_bands = [(0.3, 4), (4, 8), (8, 12), (12, 30), (30, 45)]
+        interest_bands = [(0.3, 4), (4, 8), (8, 12), (12, 18), (18, 30), (30, 45)]
         return interest_bands
 
     @staticmethod

@@ -92,7 +92,7 @@ class PreprocessingAVEC2019(GenericVideoPreprocessing):
                 continuous_label = pd.read_csv(csv_file, sep=";",
                                             skipinitialspace=True, usecols=cols,
                                             index_col=False).values.squeeze()
-                continuous_label = continuous_label[:self.dataset_info['frame_count'][index] // 5]
+                continuous_label = continuous_label[:self.dataset_info['frame_count'][index] // self.downsampling_interval_dict['frame']]
 
                 with open(npy_filename_continuous_label, 'wb') as f:
                     np.save(f, continuous_label)
@@ -151,7 +151,7 @@ class PreprocessingAVEC2019(GenericVideoPreprocessing):
                 country = raw_filename.split("_")[1]
                 self.dataset_info['subject_id'].append(subject_id)
                 self.dataset_info['trial_id'].append(1)
-                self.dataset_info['frame_count'].append(get_video_length(raw_video_fullname) // 5 * 5)
+                self.dataset_info['frame_count'].append(get_video_length(raw_video_fullname) // self.downsampling_interval_dict['frame'] * self.downsampling_interval_dict['frame'])
                 self.dataset_info['partition'].append(this_partition)
                 self.dataset_info['country'].append(country)
                 self.dataset_info['have_continuous_label'].append(1)
@@ -181,7 +181,6 @@ class PreprocessingAVEC2019(GenericVideoPreprocessing):
 
 
 if __name__ == "__main__":
-    with open("config_avec2019") as config_file:
-        config = json.load(config_file)
+    from project.emotion_regression_on_avec2019.configs import config_avec2019 as config
 
     pre = PreprocessingAVEC2019(config)

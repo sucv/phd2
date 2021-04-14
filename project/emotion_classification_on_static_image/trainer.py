@@ -2,17 +2,22 @@ from base.trainer import ClassificationTrainer
 
 from tqdm import tqdm
 
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, cohen_kappa_score
 import numpy as np
 import torch
 from torch import optim
+from torch.nn import MSELoss
 
 
 class Trainer(ClassificationTrainer):
 
     def init_optimizer_and_scheduler(self):
         self.optimizer = optim.SGD(self.get_parameters(), lr=self.learning_rate, weight_decay=0.0001, momentum=0.9)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', patience=self.patience,
+
+        mode = 'max'
+        if isinstance(self.criterion, MSELoss):
+            mode = 'min'
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode, patience=self.patience,
                                                                     factor=self.factor)
 
     def loop(self, data_loader, train_mode=True, topk_accuracy=1):
@@ -25,6 +30,8 @@ class Trainer(ClassificationTrainer):
 
             inputs = X.to(self.device)
             labels = torch.squeeze(Y.long().to(self.device))
+            if len(labels.shape) > 1:
+                labels = torch.squeeze(Y.float().to(self.device))
 
             if train_mode:
                 self.optimizer.zero_grad()
@@ -37,7 +44,11 @@ class Trainer(ClassificationTrainer):
 
             loss = self.criterion(outputs, labels)
 
-            y_true.extend(labels.data.cpu().numpy())
+            if len(labels.shape) > 1:
+                y_true.extend(self.get_preds(labels, topk_accuracy).cpu().numpy())
+            else:
+                y_true.extend(labels.data.cpu().numpy())
+
             y_pred.extend(self.get_preds(outputs, topk_accuracy).cpu().numpy())
 
             running_loss += loss.item() * self.num_classes
@@ -48,6 +59,7 @@ class Trainer(ClassificationTrainer):
 
         epoch_loss = running_loss / len(y_true)
         epoch_acc = accuracy_score(y_true, y_pred)
+        epoch_kappa = cohen_kappa_score(y_true, y_pred)
         epoch_confusion_matrix = self.calculate_confusion_matrix(y_pred, y_true)
 
-        return epoch_loss, np.round(epoch_acc.item(), 3), epoch_confusion_matrix
+        return epoch_loss, np.round(epoch_acc.item(), 3), epoch_kappa, epoch_confusion_matrix

@@ -4,10 +4,9 @@ from base.video import OpenFaceController
 from base.utils import load_single_pkl
 from base.video import combine_annotated_clips, change_video_fps
 from base.eeg import azim_proj
-from project.emotion_regression_on_mahnob_hci.utils import read_start_end_from_mahnob_tsv
-from project.emotion_regression_on_mahnob_hci.eeg import EegMahnob
-from project.emotion_regression_on_mahnob_hci.configs import config_mahnob as config
-from project.emotion_regression_on_mahnob_hci.utils import number_to_emotion_tag_dict, emotion_tag_to_arousal_class, emotion_tag_to_valence_class, arousal_class_to_number, valence_class_to_number
+from project.emotion_analysis_on_mahnob_hci.utils import read_start_end_from_mahnob_tsv, number_to_emotion_tag_dict, emotion_tag_to_arousal_class, emotion_tag_to_valence_class, arousal_class_to_number, valence_class_to_number
+from project.emotion_analysis_on_mahnob_hci.eeg import EegMahnob
+from project.emotion_analysis_on_mahnob_hci.regression.configs import config_mahnob as config
 
 import os
 import xml.etree.ElementTree as et
@@ -357,7 +356,7 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
                 output_eeg_raw_file = os.path.join(output_directory, "eeg_raw.npy")
                 output_eeg_image_file = os.path.join(output_directory, "eeg_image.npy")
 
-                if not os.path.isfile(output_eeg_raw_file):
+                if not os.path.isfile(output_eeg_image_file):
                     eeg_handler = EegMahnob(eeg_bdf_list[pointer], buffer=5, electrode_2d_pos=self.eeg_electrode_2d_coordinates, eeg_image_size=self.config['crop_size'])
                     eeg_data = eeg_handler.filtered_raw_eeg
                     eeg_image = eeg_handler.eeg_images

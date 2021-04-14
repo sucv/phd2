@@ -1,9 +1,9 @@
 from base.experiment import GenericExperiment
 from models.model import my_2d1d, my_2dlstm
 from base.dataset import NFoldMahnobArranger, MAHNOBDataset
-from project.emotion_regression_on_mahnob_hci.checkpointer import Checkpointer
-from project.emotion_regression_on_mahnob_hci.trainer import MAHNOBRegressionTrainer
-from project.emotion_regression_on_mahnob_hci.parameter_control import ParamControl
+from project.emotion_analysis_on_mahnob_hci.regression.checkpointer import Checkpointer
+from project.emotion_analysis_on_mahnob_hci.regression.trainer import MAHNOBRegressionTrainer
+from project.emotion_analysis_on_mahnob_hci.regression.parameter_control import ParamControl
 
 from base.loss_function import CCCLoss
 
@@ -22,6 +22,7 @@ class Experiment(GenericExperiment):
 
         self.num_folds = args.num_folds
         self.folds_to_run = args.folds_to_run
+        self.include_session_having_no_continuous_label = 0
 
         self.stamp = args.stamp
 
@@ -39,6 +40,13 @@ class Experiment(GenericExperiment):
         self.lstm_hidden_dim = args.lstm_hidden_dim
         self.lstm_dropout = args.lstm_dropout
 
+        self.window_length = args.window_length
+        self.hop_size = args.hop_size
+        self.continuous_label_frequency = args.continuous_label_frequency
+        self.frame_size = args.frame_size
+        self.crop_size = args.crop_size
+        self.batch_size = args.batch_size
+
         self.milestone = args.milestone
         self.learning_rate = args.learning_rate
         self.min_learning_rate = args.min_learning_rate
@@ -48,34 +56,19 @@ class Experiment(GenericExperiment):
         self.num_epochs = args.num_epochs
         self.min_num_epochs = args.min_num_epochs
         self.factor = args.factor
-
         self.release_count = args.release_count
+
+        self.num_classes = args.num_classes
+        self.emotion_dimension = args.emotion_dimension
+        self.metrics = args.metrics
+
         self.device = self.init_device()
 
     def load_config(self):
-        from project.emotion_regression_on_mahnob_hci.configs import config_mahnob as config
+        from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
         return config
 
     def create_model(self):
-        # # Here we initialize the model. It contains the spatial block and temporal block.
-        # FRAME_DIM = 96
-        # TIME_DEPTH = 300
-        # SHARED_LINEAR_DIM1 = 1024
-        # SHARED_LINEAR_DIM2 = 512
-        # EMBEDDING_DIM = SHARED_LINEAR_DIM2
-        # HIDDEN_DIM = 512
-        # OUTPUT_DIM = 2
-        # N_LAYERS = 1
-        # DROPOUT_RATE_1 = 0.5
-        # DROPOUT_RATE_2 = 0.5
-        # model = initialize_emotion_spatial_temporal_model(
-        #     self.device, frame_dim=FRAME_DIM, time_depth=TIME_DEPTH,
-        #     shared_linear_dim1=SHARED_LINEAR_DIM1,
-        #     shared_linear_dim2=SHARED_LINEAR_DIM2,
-        #     embedding_dim=EMBEDDING_DIM,
-        #     hidden_dim=HIDDEN_DIM, output_dim=OUTPUT_DIM, n_layers=N_LAYERS,
-        #     dropout_rate_1=DROPOUT_RATE_1, dropout_rate_2=DROPOUT_RATE_2
-        # )
 
         output_dim = 1
         if "eeg_image" in self.modality:
@@ -88,8 +81,7 @@ class Experiment(GenericExperiment):
         if "2d1d" in self.model_name:
             model = my_2d1d(backbone_state_dict=backbone_state_dict, backbone_mode=self.backbone_mode,
                             embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
-                            modality=self.modality,
-                            output_dim=output_dim, kernel_size=self.cnn1d_kernel_size,
+                            modality=self.modality, output_dim=output_dim, kernel_size=self.cnn1d_kernel_size,
                             dropout=self.cnn1d_dropout, root_dir=self.model_load_path)
         elif "2dlstm" in self.model_name:
             model = my_2dlstm(backbone_state_dict=backbone_state_dict, backbone_mode=self.backbone_mode,
@@ -131,9 +123,10 @@ class Experiment(GenericExperiment):
         dataloaders_dict = {}
         for partition in partition_dictionary.keys():
             dataset = MAHNOBDataset(self.config, data_dict[partition], modality=self.modality,
+                                    emotion_dimension=self.emotion_dimension,
                                     time_delay=self.time_delay, class_labels=class_labels, mode=partition)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
-                dataset=dataset, batch_size=self.config['batch_size'], shuffle=True if partition == "train" else False)
+                dataset=dataset, batch_size=self.batch_size, shuffle=True if partition == "train" else False)
 
         return dataloaders_dict, length_dict
 
@@ -141,8 +134,10 @@ class Experiment(GenericExperiment):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
 
-        fold_arranger = NFoldMahnobArranger(
-            self.config, include_session_having_no_continuous_label=False, modality=self.modality)
+        fold_arranger = NFoldMahnobArranger(dataset_load_path=self.dataset_load_path,
+                                            dataset_folder=self.dataset_folder,
+                                            include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
+                                            modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
         print(subject_id_of_all_folds)
         model = self.create_model()
@@ -161,7 +156,7 @@ class Experiment(GenericExperiment):
             dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
 
             trainer = MAHNOBRegressionTrainer(model, stamp=self.stamp, model_name=self.model_name,
-                                              learning_rate=self.learning_rate, metrics=self.config['metrics'],
+                                              learning_rate=self.learning_rate, metrics=self.metrics,
                                               save_path=fold_save_path, early_stopping=self.early_stopping,
                                               patience=self.patience, factor=self.factor,
                                               milestone=self.milestone, criterion=criterion, verbose=True,

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from operator import itemgetter
 
+import numpy as np
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
@@ -97,6 +98,32 @@ class OuluArranger(CKplusArranger):
     def count_subject_for_each_fold():
         foldwise_subject_count = [8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
         return foldwise_subject_count
+
+
+class FerplusCrossEntropyClassificationDataset(Dataset):
+    def __init__(self, data_path, mode='train', transform=None):
+        self.data_path = data_path
+        self.mode = mode
+        self.transform = transform
+        self.data, self.data_label = self.load_data()
+
+    def load_data(self):
+
+        npy_data = np.load(os.path.join(self.data_path, self.mode + "_data.npy"), mmap_mode='c')
+        npy_data_label = np.load(os.path.join(self.data_path, self.mode + "_data_label.npy"), mmap_mode='c')
+
+        return npy_data, npy_data_label
+
+    def __getitem__(self, index):
+        image = self.data[index]
+        image = Image.fromarray(image)
+        image = self.transform(image)
+        label = torch.Tensor(self.data_label[index])
+
+        return image, label
+
+    def __len__(self):
+        return len(self.data)
 
 
 class EmotionalStaticImgClassificationDataset(Dataset):

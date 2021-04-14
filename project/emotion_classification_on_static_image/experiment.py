@@ -2,7 +2,7 @@ from base.experiment import GenericExperiment
 from base.utils import init_weighted_sampler_and_weights
 from base.loss_function import FocalLoss
 from project.emotion_classification_on_static_image.dataset import CKplusArranger, OuluArranger, RafdArranger, \
-    EmotionalStaticImgClassificationDataset
+    EmotionalStaticImgClassificationDataset, FerplusCrossEntropyClassificationDataset
 from base.checkpointer import ClassificationCheckpointer
 from project.emotion_classification_on_static_image.trainer import Trainer
 from project.emotion_classification_on_static_image.parameter_control import ParamControl
@@ -13,6 +13,7 @@ from operator import itemgetter
 
 import torch
 from torch.utils import data
+from torch.nn import MSELoss
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Compose, Resize, RandomHorizontalFlip, RandomCrop, CenterCrop, RandomAffine, \
     ColorJitter, ToTensor, Normalize
@@ -32,9 +33,12 @@ class Experiment(GenericExperiment):
         if not self.cross_validation:
             self.fold_to_run = [0]
 
+        self.dataset_load_path = args.dataset_load_path
         self.save_model = args.save_model
         self.model_name = args.model_name + "_" + args.dataset + "_" + self.stamp
         self.model_mode = args.model_mode
+        self.use_weighted_sampler = args.use_weighted_sampler
+
         self.learning_rate = args.learning_rate
         self.min_learning_rate = args.min_learning_rate
         self.num_epochs = args.num_epochs
@@ -65,7 +69,7 @@ class Experiment(GenericExperiment):
         elif self.dataset == "fer2013":
             from project.emotion_classification_on_static_image.configs import config_fer2013 as config
 
-        elif self.dataset == "ferp":
+        elif self.dataset == "ferp" or self.dataset == "ferp_ce":
             from project.emotion_classification_on_static_image.configs import config_ferplus as config
 
         elif self.dataset == "rafd":
@@ -86,8 +90,8 @@ class Experiment(GenericExperiment):
         transform = []
         transform.append(Resize(self.config['resize']))
         transform.append(RandomCrop(self.config['center_crop']))
-        # transform.append(ColorJitter())
-        # transform.append(RandomAffine(degrees=10))
+        transform.append(ColorJitter())
+        transform.append(RandomAffine(degrees=10))
         transform.append(RandomHorizontalFlip())
         transform.append(ToTensor())
         transform.append(Normalize(mean=self.config['mean'], std=self.config['std']))
@@ -134,19 +138,27 @@ class Experiment(GenericExperiment):
             test_dataset = EmotionalStaticImgClassificationDataset(test_list, transform)
 
         else:
-            train_dataset = ImageFolder(os.path.join(self.config['remote_root_directory'], 'train'),
-                                        transform=transform)
 
-            validate_dataset = ImageFolder(os.path.join(self.config['remote_root_directory'], 'validate'),
-                                           transform=transform_val)
-            # Some datasets did not provide test sets.
-            test_dataset = None
-            if os.path.isdir(os.path.join(self.config['remote_root_directory'], 'test')):
-                test_dataset = ImageFolder(os.path.join(self.config['remote_root_directory'], 'test'),
-                                           transform=transform_val)
+            if self.dataset == "ferp_ce":
+                train_dataset = FerplusCrossEntropyClassificationDataset(self.dataset_load_path, mode='train', transform=transform)
+                validate_dataset = FerplusCrossEntropyClassificationDataset(self.dataset_load_path, mode='validate',
+                                                                         transform=transform_val)
+                test_dataset = FerplusCrossEntropyClassificationDataset(self.dataset_load_path, mode='test',
+                                                                         transform=transform_val)
+            else:
+                train_dataset = ImageFolder(os.path.join(self.dataset_load_path, 'train'),
+                                            transform=transform)
+
+                validate_dataset = ImageFolder(os.path.join(self.dataset_load_path, 'validate'),
+                                               transform=transform_val)
+                # Some datasets did not provide test sets.
+                test_dataset = None
+                if os.path.isdir(os.path.join(self.dataset_load_path, 'test')):
+                    test_dataset = ImageFolder(os.path.join(self.dataset_load_path, 'test'),
+                                               transform=transform_val)
 
         sampler, sample_weights = None, None
-        if 'use_weighted_sampler' in self.config and self.config['use_weighted_sampler']:
+        if self.use_weighted_sampler and not self.dataset == "ferp_ce":
             sampler, sample_weights = init_weighted_sampler_and_weights(train_dataset)
 
         if sampler is None:
@@ -173,6 +185,9 @@ class Experiment(GenericExperiment):
             fold_list_origin = arranger.establish_fold()
 
         transform_dict = self.init_transform()
+        criterion = FocalLoss()
+        if self.dataset == "ferp_ce":
+            criterion = MSELoss()
 
         for fold in iter(self.fold_to_run):
             fold_save_path = os.path.join(save_path, str(fold))
@@ -183,7 +198,7 @@ class Experiment(GenericExperiment):
             dataloader_dict, samples_weights = self.init_dataloader(transform_dict=transform_dict, fold=fold,
                                                                     fold_list_origin=fold_list_origin)
             model = self.init_model()
-            criterion = FocalLoss()
+
             milestone = self.milestone
 
             trainer = Trainer(model, model_name=self.model_name, save_path=fold_save_path,

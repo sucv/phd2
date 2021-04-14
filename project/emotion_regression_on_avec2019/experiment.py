@@ -42,13 +42,25 @@ class Experiment(GenericExperiment):
 
         self.milestone = args.milestone
         self.learning_rate = args.learning_rate
+        self.early_stopping = args.early_stopping
         self.patience = args.patience
         self.time_delay = args.time_delay
         self.num_epochs = args.num_epochs
         self.min_num_epochs = args.min_num_epochs
         self.factor = args.factor
 
+        self.window_length = args.window_length
+        self.hop_size = args.hop_size
+        self.continuous_label_frequency = args.continuous_label_frequency
+        self.frame_size = args.frame_size
+        self.crop_size = args.crop_size
+        self.batch_size = args.batch_size
+
+        self.num_classes = args.num_classes
+        self.emotion_dimension = args.emotion_dimension
+        self.metrics = args.metrics
         self.release_count = args.release_count
+
         self.device = self.init_device()
 
     def load_config(self):
@@ -92,23 +104,28 @@ class Experiment(GenericExperiment):
         return model
 
     def init_dataloader(self):
-        arranger = AVEC2019Arranger(self.config)
+        arranger = AVEC2019Arranger(self.dataset_load_path, self.dataset_folder, window_length=self.window_length,
+                                    hop_size=self.hop_size, continuous_label_frequency=self.continuous_label_frequency)
 
         data_dict = arranger.make_data_dict(train_country=self.train_country,
                                             validate_country=self.validate_country)
 
         length_dict = arranger.make_length_dict(train_country=self.train_country,
                                                 validate_country=self.validate_country)
-        train_dataset = AVEC2019Dataset(self.config, data_dict['train'], time_delay=self.time_delay,
-                                        emotion=self.train_emotion,
-                                        head=self.head, mode='train')
+        train_dataset = AVEC2019Dataset(data_dict['train'], crop_size=self.crop_size,
+                                        frame_to_label_ratio=self.config['downsampling_interval_dict']['frame'],
+                                        time_delay=self.time_delay,
+                                        emotion=self.train_emotion, head=self.head, mode='train')
         train_loader = torch.utils.data.DataLoader(
-            dataset=train_dataset, batch_size=self.config['batch_size'], shuffle=True)
+            dataset=train_dataset, batch_size=self.batch_size, shuffle=True)
 
-        validate_dataset = AVEC2019Dataset(self.config, data_dict['validate'], time_delay=self.time_delay,
+        validate_dataset = AVEC2019Dataset(data_dict['train'], crop_size=self.crop_size,
+                                           frame_to_label_ratio=self.config['downsampling_interval_dict']['frame'],
+                                           time_delay=self.time_delay,
                                            emotion=self.train_emotion, head=self.head, mode='validate')
+
         validate_loader = torch.utils.data.DataLoader(
-            dataset=validate_dataset, batch_size=1, shuffle=False)
+            dataset=validate_dataset, batch_size=self.batch_size, shuffle=False)
 
         dataloader_dict = {'train': train_loader, 'validate': validate_loader}
         return dataloader_dict, length_dict
@@ -126,7 +143,7 @@ class Experiment(GenericExperiment):
         criterion = CCCLoss()
 
         trainer = AVEC2019Trainer(model, model_name=self.model_name, learning_rate=self.learning_rate,
-                                  metrics=self.config['metrics'], save_path=save_path, early_stopping=20,
+                                  metrics=self.metrics, save_path=save_path, early_stopping=self.early_stopping,
                                   train_emotion=self.train_emotion, patience=self.patience, factor=self.factor,
                                   emotional_dimension=self.emotion_dimension, head=self.head,
                                   milestone=self.milestone, criterion=criterion, verbose=True, device=self.device)
@@ -141,4 +158,5 @@ class Experiment(GenericExperiment):
             checkpoint_controller.init_csv_logger(self.args, self.config)
 
         trainer.fit(dataloader_dict, length_dict, num_epochs=self.num_epochs, min_num_epochs=self.min_num_epochs,
-                    save_model=True, parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
+                    save_model=True, parameter_controller=parameter_controller,
+                    checkpoint_controller=checkpoint_controller)

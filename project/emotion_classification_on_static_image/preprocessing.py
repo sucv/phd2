@@ -1,6 +1,6 @@
 from base.preprocessing import GenericImagePreprcessing, GenericImagePreprcessingForNFoldCV
 from base.facial_landmark import facial_image_crop_by_landmark
-from base.utils import load_single_csv, copy_file
+from base.utils import load_single_csv, copy_file, save_pkl_file
 from base.video import OpenFaceController
 
 import argparse
@@ -156,6 +156,7 @@ class PreprocessingFER2013(GenericImagePreprcessing):
 
 class PreprocessingFerPlus(PreprocessingFER2013):
     def __init__(self, config):
+        self.mode = config['mode']
         super().__init__(config)
 
     def init_emotion_dict(self):
@@ -168,28 +169,111 @@ class PreprocessingFerPlus(PreprocessingFER2013):
         fer_csv_data = self.load_csv(".csv")
         fer_plus_csv_data = self.load_csv("new.csv")
 
-        for (index, fer_row), (_, fer_plus_row) in tqdm(zip(fer_csv_data.iterrows(), fer_plus_csv_data.iterrows())):
+        if self.mode == "majority":
 
-            emotion_pointer = np.argmax(fer_plus_row[2:10].array)
-            if emotion_pointer < 8:
-                labels = np.array(fer_plus_row[2:10].array)
-                max_vote = np.max(labels)
-                if max_vote > 5:
-                # max_vote_emotion = np.where(labels == max_vote)[0]
-                # num_max_votes = max_vote_emotion.size
-                # if not (num_max_votes >= 3) and not (num_max_votes * max_vote <= 0.5 * num_votes[ii]):
+            for (index, fer_row), (_, fer_plus_row) in tqdm(zip(fer_csv_data.iterrows(), fer_plus_csv_data.iterrows())):
+                    emotion_pointer = np.argmax(fer_plus_row[2:10].array)
+                    if emotion_pointer < 8:
+                        labels = np.array(fer_plus_row[2:10].array)
+                        max_vote = np.max(labels)
+                        if max_vote > 5:
 
-                    emotion = self.emotion_dict[emotion_pointer]
-                    pixels = fer_row['pixels']
-                    partition = self.partition_dict[fer_row['Usage']]
+                            emotion = self.emotion_dict[emotion_pointer]
+                            pixels = fer_row['pixels']
+                            partition = self.partition_dict[fer_row['Usage']]
 
-                    directory = os.path.join(self.root_directory, self.output_directory, partition, emotion)
-                    os.makedirs(directory, exist_ok=True)
+                            directory = os.path.join(self.root_directory, self.output_directory, partition, emotion)
+                            os.makedirs(directory, exist_ok=True)
 
-                    fullname = os.path.join(directory, str(index) + ".jpg")
-                    if not os.path.isfile(fullname):
-                        img = self.restore_img_from_csv_row(pixels)
-                        img.save(fullname, "JPEG")
+                            fullname = os.path.join(directory, str(index) + ".jpg")
+                            if not os.path.isfile(fullname):
+                                img = self.restore_img_from_csv_row(pixels)
+                                img.save(fullname, "JPEG")
+
+        elif self.mode == "cross_entropy":
+            # replace all votes with only 1 count to 0 for outlier removal
+            vote_matrix = fer_plus_csv_data.loc[:, 'neutral':'NF'].to_numpy()
+            vote_matrix[vote_matrix == 1] = 0
+
+            npy_train, npy_train_label = [], []
+            npy_validate, npy_validate_label = [], []
+            npy_test, npy_test_label = [], []
+
+            for (index, fer_row), (_, fer_plus_row) in tqdm(zip(fer_csv_data.iterrows(), fer_plus_csv_data.iterrows()), total=len(fer_plus_csv_data)):
+                image_name = fer_plus_row['Image name']
+
+                # if not NaN
+                # NaN here means that this image is non-face and should be excluded.
+                if not isinstance(image_name, float):
+
+                    # 8 emotions in total
+                    size = 10
+
+                    emotion_raw = vote_matrix[index]
+                    sum_list = sum(emotion_raw)
+                    emotion = [0.0] * size
+
+                    sum_part = 0
+                    count = 0
+                    valid_emotion = True
+
+                    while sum_part < 0.75 * sum_list and count < 3 and valid_emotion:
+                        max_value = max(emotion_raw)
+                        for i in range(size):
+                            if emotion_raw[i] == max_value:
+                                emotion[i] = max_value
+                                emotion_raw[i] = 0
+                                sum_part += emotion[i]
+                                count += 1
+
+                                if i >= 8:
+                                    valid_emotion = False
+
+                                    if sum(emotion) > max_value:
+                                        emotion[i] = 0
+                                        count -= 1
+                                    break
+
+                    if not (sum(emotion) <= 0.5 * sum_list or count > 3):
+                        emotion = [float(i) / sum(emotion) for i in emotion]
+                        idx = np.argmax(emotion)
+                        if idx < 8:
+
+                            emotion = emotion[:-2]
+                            emotion = [float(i) / sum(emotion) for i in emotion]
+
+                            pixels = fer_row['pixels']
+                            img = self.restore_img_from_csv_row(pixels)
+                            img = np.stack((img,) * 3, axis=-1)
+                            if fer_plus_row['Usage'] == "Training":
+                                npy_train.append(img)
+                                npy_train_label.append(emotion)
+                            elif fer_plus_row['Usage'] == "PublicTest":
+                                npy_validate.append(img)
+                                npy_validate_label.append(emotion)
+                            else:
+                                npy_test.append(img)
+                                npy_test_label.append(emotion)
+
+            npy_train = np.stack(npy_train)
+            npy_train_label = np.stack(npy_train_label)
+            np.save(os.path.join(self.output_directory, 'train_data.npy'), npy_train)
+            np.save(os.path.join(self.output_directory, 'train_data_label.npy'), npy_train_label)
+
+            npy_validate = np.stack(npy_validate)
+            npy_validate_label = np.stack(npy_validate_label)
+            np.save(os.path.join(self.output_directory, 'validate_data.npy'), npy_validate)
+            np.save(os.path.join(self.output_directory, 'validate_data_label.npy'), npy_validate_label)
+
+            npy_test = np.stack(npy_test)
+            npy_test_label = np.stack(npy_test_label)
+            np.save(os.path.join(self.output_directory, 'test_data.npy'), npy_test)
+            np.save(os.path.join(self.output_directory, 'test_data_label.npy'), npy_test_label)
+
+
+
+
+
 
 
 class PreprocessingCKplus(GenericImagePreprcessingForNFoldCV):
@@ -384,7 +468,7 @@ class PreprocessingRAFD(PreprocessingOuluCISIA):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocessing of Emotion Classification Image Datasets.")
-    parser.add_argument("-d", help="Wchich dataset to preprocess? [affectnet, ck+, fer2013, fer+, rafd, rafdb, oulu]", default="rafd")
+    parser.add_argument("-d", default="fer+", help="Wchich dataset to preprocess? [affectnet, ck+, fer2013, fer+, rafd, rafdb, oulu]")
     args = parser.parse_args()
 
     if args.d == "affectnet":

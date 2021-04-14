@@ -30,62 +30,27 @@ class GenericEegController(object):
         raise NotImplementedError
 
 
-def bandpower(data, sampling_frequence, band, window_sec=None, relative=False):
-    """Compute the average power of the signal x in a specific frequency band.
-    source: https://raphaelvallat.com/bandpower.html
-    Parameters
-    ----------
-    data : 1d-array
-        Input signal in the time-domain.
-    sampling_frequence : float
-        Sampling frequency of the data.
-    band : list
-        Lower and upper frequencies of the band of interest.
-    window_sec : float
-        Length of each window in seconds.
-        If None, window_sec = (1 / min(band)) * 2
-    relative : boolean
-        If True, return the relative power (= divided by the total power of the signal).
-        If False (default), return the absolute power.
-
-    Return
-    ------
-    bp : float
-        Absolute or relative band power.
-    """
-
-    band = np.asarray(band)
-    low, high = band
-
-    # Define window length
-    if window_sec is not None:
-        nperseg = window_sec * sampling_frequence
-    else:
-        nperseg = (2 / low) * sampling_frequence
-
+def bandpower_multiple(data, sampling_frequence, band_sequence, window_sec=None, relative=False):
     # Compute the modified periodogram (Welch)
+
+    nperseg = window_sec * sampling_frequence
+
     freqs, psd = welch(data, sampling_frequence, nperseg=nperseg)
 
-    # Frequency resolution
     freq_res = freqs[1] - freqs[0]
 
-    # Find closest indices of band in frequency vector
-    idx_band = np.logical_and(freqs >= low, freqs <= high)
-
-    # Integral approximation of the spectrum using Simpson's rule.
-    band_power = simps(psd[:, idx_band], dx=freq_res)
-
-    if relative:
-        band_power /= simps(psd, dx=freq_res)
-    return band_power
-
-
-def bandpower_multiple(data, sampling_frequence, band_sequence, window_sec=None, relative=False):
     band_powers = []
 
     for band in band_sequence:
-        band_power = bandpower(data=data, sampling_frequence=sampling_frequence, band=band, window_sec=window_sec,
-                               relative=relative)
+        low, high = band
+        idx_band = np.logical_and(freqs >= low, freqs <= high)
+
+        # Integral approximation of the spectrum using Simpson's rule.
+        band_power = simps(psd[:, idx_band], dx=freq_res)
+
+        if relative:
+            band_power /= simps(psd, dx=freq_res)
+
         band_powers.extend(band_power)
 
     band_powers = np.asarray(band_powers)
@@ -153,25 +118,6 @@ def augment_EEG(data, stdMult, pca=False, n_components=2):
         for f, feat in enumerate(data.transpose()):
             augData[:, f] = feat + np.random.normal(scale=stdMult*np.std(feat), size=feat.size)
     return augData
-
-
-def augment_EEG_image(data, std_mult, pca=False, n_components=2):
-    """
-    Augment data by adding normal noise to each feature.
-    :param data: EEG feature data as a a colored image [n_samples, n_colors, W, H]
-    :param std_mult: Multiplier for std of added noise
-    :param pca: if True will perform PCA on data and add noise proportional to PCA components.
-    :param n_components: Number of components to consider when using PCA.
-    :return: Augmented data as a matrix (n_samples x n_features)
-    """
-    augData = np.zeros((data.shape[0], data.shape[1], data.shape[2] * data.shape[3]))
-    for c in range(data.shape[1]):
-        reshData = np.reshape(data['featMat'][:, c, :, :], (data['featMat'].shape[0], -1))
-        if pca:
-            augData[:, c, :] = augment_EEG(reshData, std_mult, pca=True, n_components=n_components)
-        else:
-            augData[:, c, :] = augment_EEG(reshData, std_mult, pca=False)
-    return np.reshape(augData, data['featMat'].shape)
 
 
 def gen_images(locs, features, n_gridpoints, normalize=True,

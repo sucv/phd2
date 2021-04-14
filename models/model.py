@@ -82,7 +82,7 @@ class my_res50_tempool(nn.Module):
 
 
 class my_2d1d(nn.Module):
-    def __init__(self, backbone_state_dict, backbone_mode="ir", modality='frame', embedding_dim=512, channels=None,
+    def __init__(self, backbone_state_dict, backbone_mode="ir", modality=['frame'], embedding_dim=512, channels=None,
                  output_dim=1, kernel_size=5, dropout=0.1, root_dir=''):
         super().__init__()
 
@@ -107,7 +107,7 @@ class my_2d1d(nn.Module):
 
             spatial.load_state_dict(state_dict)
         elif 'eeg_image' in self.modality:
-            spatial = my_res50(mode=self.backbone_mode, root_dir=self.root_dir, use_pretrained=False, num_classes=3, input_channels=5)
+            spatial = my_res50(mode=self.backbone_mode, root_dir=self.root_dir, use_pretrained=False, num_classes=3, input_channels=6)
 
             if fold is not None:
                 path = os.path.join(self.root_dir, self.backbone_state_dict + "_" + str(fold) + ".pth")
@@ -164,8 +164,8 @@ class my_2dlstm(nn.Module):
 
             spatial.load_state_dict(state_dict)
         elif 'eeg_image' in self.modality:
-            spatial = my_res50_eeg(mode=self.backbone_mode, root_dir=self.root_dir, use_pretrained=False,
-                                   num_classes=3)
+            spatial = my_res50(mode=self.backbone_mode, root_dir=self.root_dir, use_pretrained=False, num_classes=3,
+                               input_channels=6)
 
             if fold is not None:
                 path = os.path.join(self.root_dir, self.backbone_state_dict + "_" + str(fold) + ".pth")

@@ -11,11 +11,9 @@ from torchvision.transforms import transforms
 
 
 class VideoEmoRegressionArranger(object):
-    def __init__(self, config):
-        self.root_directory = config['remote_root_directory']
-        self.npy_folder = config['npy_folder']
-        self.window_length = config['window_length']
-        self.hop_size = config['hop_size']
+    def __init__(self, dataset_load_path, dataset_folder):
+        self.root_directory = dataset_load_path
+        self.npy_folder = dataset_folder
         self.dataset_info = self.get_dataset_info()
 
     def make_length_dict(self, **kwargs):
@@ -62,10 +60,10 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
     A class to prepare files according to the n-fold manner.
     """
 
-    def __init__(self, config, include_session_having_no_continuous_label, modality):
+    def __init__(self, dataset_load_path, dataset_folder, modality, window_length=24, hop_size=8, continuous_label_frequency=4, include_session_having_no_continuous_label=True):
 
         # The root directory of the dataset.
-        super().__init__(config)
+        super().__init__(dataset_load_path=dataset_load_path, dataset_folder=dataset_folder)
 
         # Load the dataset information
         self.dataset_info = self.get_dataset_info()
@@ -73,8 +71,8 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         # Regression or Classification?
         self.include_session_having_no_continuous_label = include_session_having_no_continuous_label
 
-        self.depth = config['window_length'] * config['continuous_label_frequency']
-        self.step_size = config['hop_size'] * config['continuous_label_frequency']
+        self.depth = window_length * continuous_label_frequency
+        self.step_size = hop_size * continuous_label_frequency
 
         # Frame, EEG, which one or both?
         self.modality = modality
@@ -115,52 +113,55 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
                 for subject_id in subject_id_of_a_fold:
 
                     session_indices = self.get_session_index(subject_id)
-                    if len(session_indices) > 1:
-                        length_list = list(itemgetter(*session_indices)(self.dataset_info['refined_processed_length']))
-                        session_name_list = list(itemgetter(*session_indices)(self.dataset_info['session_name']))
-                        directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
-                                          session_name in session_name_list]
-                    else:
-                        length_list = self.dataset_info['refined_processed_length'][session_indices[0]]
-                        session_name_list = self.dataset_info['session_name'][session_indices[0]]
-                        directory_list = os.path.join(self.root_directory, self.npy_folder, session_name_list)
-
-                    initial_index_relative_to_this_subject = 0
-                    for i in range(len(session_indices)):
-
+                    if len(session_indices) > 0:
                         if len(session_indices) > 1:
-                            session_name = session_name_list[i]
-                            length = length_list[i]
-                            trial_directory = directory_list[i]
+                            length_list = list(itemgetter(*session_indices)(self.dataset_info['refined_processed_length']))
+                            session_name_list = list(itemgetter(*session_indices)(self.dataset_info['session_name']))
+                            directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
+                                              session_name in session_name_list]
+
+                        # If found only one session
                         else:
-                            session_name = session_name_list
-                            length = length_list
-                            trial_directory = directory_list
+                            length_list = self.dataset_info['refined_processed_length'][session_indices[0]]
+                            session_name_list = self.dataset_info['session_name'][session_indices[0]]
+                            directory_list = os.path.join(self.root_directory, self.npy_folder, session_name_list)
 
-                        num_windows = int(np.ceil((length - self.depth) / self.step_size)) + 1
+                        initial_index_relative_to_this_subject = 0
+                        for i in range(len(session_indices)):
 
-                        for window in range(num_windows):
-                            start = window * self.step_size
-                            end = start + self.depth
+                            if len(session_indices) > 1:
+                                session_name = session_name_list[i]
+                                length = length_list[i]
+                                trial_directory = directory_list[i]
+                            else:
+                                session_name = session_name_list
+                                length = length_list
+                                trial_directory = directory_list
 
-                            if end > length:
-                                break
+                            num_windows = int(np.ceil((length - self.depth) / self.step_size)) + 1
 
-                            relative_indices = np.arange(start, end)
-                            absolute_indices = relative_indices + initial_index_relative_to_this_subject
-                            data_of_a_modal.append([trial_directory, absolute_indices, relative_indices, session_name])
+                            for window in range(num_windows):
+                                start = window * self.step_size
+                                end = start + self.depth
 
-                        if (length - self.depth) % self.step_size != 0:
-                            start = length - self.depth
-                            end = length
-                            relative_indices = np.arange(start, end)
-                            absolute_indices = relative_indices + initial_index_relative_to_this_subject
-                            data_of_a_modal.append([trial_directory, absolute_indices, relative_indices, session_name])
+                                if end > length:
+                                    break
 
-                        if len(session_indices) > 1:
-                            initial_index_relative_to_this_subject += length_list[i]
+                                relative_indices = np.arange(start, end)
+                                absolute_indices = relative_indices + initial_index_relative_to_this_subject
+                                data_of_a_modal.append([trial_directory, absolute_indices, relative_indices, session_name])
 
-                data_dict[partition].extend(data_of_a_modal)
+                            if (length - self.depth) % self.step_size != 0:
+                                start = length - self.depth
+                                end = length
+                                relative_indices = np.arange(start, end)
+                                absolute_indices = relative_indices + initial_index_relative_to_this_subject
+                                data_of_a_modal.append([trial_directory, absolute_indices, relative_indices, session_name])
+
+                            if len(session_indices) > 1:
+                                initial_index_relative_to_this_subject += length_list[i]
+
+                    data_dict[partition].extend(data_of_a_modal)
 
         return data_dict
 
@@ -170,7 +171,7 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         subject_id_of_all_partitions = self.partition_train_validate_test_for_subjects(
             subject_id_of_all_folds, partition_dictionary)
 
-        # Initialize the dictionary to be outputed.
+        # Initialize the dictionary to be outputted.
         length_dict = {key: {} for key in partition_dictionary}
 
         for partition, subject_id_of_a_partition in subject_id_of_all_partitions.items():
@@ -304,24 +305,26 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
 
 class MAHNOBDataset(Dataset):
-    def __init__(self, config, data_list, modality, time_delay=0, class_labels=None, mode='train'):
-        self.config = config
+    def __init__(self, config, data_list, modality, emotion_dimension, frame_size=48, crop_size=40, time_delay=0, class_labels=None, mode='train'):
+        self.frame_size = frame_size
+        self.crop_size = crop_size
         self.mode = mode
         self.data_list = data_list
         self.ratio = config['downsampling_interval_dict']
         self.modality = modality
+        self.emotion_dimension = emotion_dimension
         self.time_delay = np.int(time_delay * 4)
         self.get_3D_transforms()
         self.class_label = class_labels
 
     def get_3D_transforms(self):
         normalize = transforms3D.GroupNormalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-        normalize_eeg_image = transforms3D.GroupNormalize([0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5])
+        normalize_eeg_image = transforms3D.GroupNormalize([0.5, 0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
 
         if self.mode == 'train':
             self.image_transforms = transforms.Compose([
                 transforms3D.GroupNumpyToPILImage(0),
-                transforms3D.GroupRandomCrop(self.config['frame_size'], self.config['crop_size']),
+                transforms3D.GroupRandomCrop(self.frame_size, self.crop_size),
                 transforms3D.GroupRandomHorizontalFlip(),
                 transforms3D.Stack(),
                 transforms3D.ToTorchFormatTensor(),
@@ -337,7 +340,7 @@ class MAHNOBDataset(Dataset):
         else:
             self.image_transforms = transforms.Compose([
                 transforms3D.GroupNumpyToPILImage(0),
-                transforms3D.GroupCenterCrop(self.config['crop_size']),
+                transforms3D.GroupCenterCrop(self.crop_size),
                 transforms3D.Stack(),
                 transforms3D.ToTorchFormatTensor(),
                 normalize
