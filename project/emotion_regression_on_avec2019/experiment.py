@@ -60,7 +60,8 @@ class Experiment(GenericExperiment):
         self.emotion_dimension = args.emotion_dimension
         self.metrics = args.metrics
         self.release_count = args.release_count
-
+        self.gradual_release = args.gradual_release
+        self.save_plot = args.save_plot
         self.device = self.init_device()
 
     def load_config(self):
@@ -119,7 +120,7 @@ class Experiment(GenericExperiment):
         train_loader = torch.utils.data.DataLoader(
             dataset=train_dataset, batch_size=self.batch_size, shuffle=True)
 
-        validate_dataset = AVEC2019Dataset(data_dict['train'], crop_size=self.crop_size,
+        validate_dataset = AVEC2019Dataset(data_dict['validate'], crop_size=self.crop_size,
                                            frame_to_label_ratio=self.config['downsampling_interval_dict']['frame'],
                                            time_delay=self.time_delay,
                                            emotion=self.train_emotion, head=self.head, mode='validate')
@@ -146,9 +147,10 @@ class Experiment(GenericExperiment):
                                   metrics=self.metrics, save_path=save_path, early_stopping=self.early_stopping,
                                   train_emotion=self.train_emotion, patience=self.patience, factor=self.factor,
                                   emotional_dimension=self.emotion_dimension, head=self.head,
-                                  milestone=self.milestone, criterion=criterion, verbose=True, device=self.device)
+                                  milestone=self.milestone, criterion=criterion, verbose=True, save_plot=self.save_plot, device=self.device)
 
-        parameter_controller = ParamControl(trainer, release_count=self.release_count, backbone_mode=self.backbone_mode)
+        parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
+                                            release_count=self.release_count, backbone_mode=self.backbone_mode)
 
         checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 

@@ -17,7 +17,7 @@ import torch.utils.data
 class AVEC2019Trainer(GenericTrainer):
     def __init__(self, model, model_name='2d1d', save_path=None, train_emotion='both', head='multi-headed', factor=0.1,
                  early_stopping=100, criterion=None, milestone=[0], patience=10, learning_rate=0.00001, device='cpu',
-                 emotional_dimension=None, metrics=None, verbose=False, print_training_metric=False, **kwargs):
+                 emotional_dimension=None, metrics=None, verbose=False, print_training_metric=False, save_plot=False, **kwargs):
 
         # The device to use.
         super().__init__(model, model_name=model_name, save_path=save_path, criterion=criterion, learning_rate=learning_rate,
@@ -26,6 +26,7 @@ class AVEC2019Trainer(GenericTrainer):
 
         # Whether to show the information strings.
         self.verbose = verbose
+        self.save_plot = save_plot
 
         # Whether print the metrics for training.
         self.print_training_metric = print_training_metric
@@ -278,12 +279,13 @@ class AVEC2019Trainer(GenericTrainer):
         metric_handler.calculate_metrics()
         epoch_result_dict = metric_handler.metric_record_dict
 
-        # This object plot the figures and save them.
-        plot_handler = PlotHandler(self.metrics, self.emotional_dimension, epoch_result_dict,
-                                   output_handler.sessionwise_dict, continuous_label_handler.sessionwise_dict,
-                                   epoch=epoch, train_mode=train_mode,
-                                   directory_to_save_plot=self.save_path)
-        plot_handler.save_output_vs_continuous_label_plot()
+        if self.save_plot:
+            # This object plot the figures and save them.
+            plot_handler = PlotHandler(self.metrics, self.emotional_dimension, epoch_result_dict,
+                                       output_handler.sessionwise_dict, continuous_label_handler.sessionwise_dict,
+                                       epoch=epoch, train_mode=train_mode,
+                                       directory_to_save_plot=self.save_path)
+            plot_handler.save_output_vs_continuous_label_plot()
 
         return epoch_loss, epoch_result_dict
 

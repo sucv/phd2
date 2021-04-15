@@ -1,6 +1,6 @@
 from base.experiment import GenericExperiment
 from base.utils import init_weighted_sampler_and_weights
-from base.loss_function import FocalLoss
+from base.loss_function import FocalLoss, CrossEntropyLoss
 from project.emotion_classification_on_static_image.dataset import CKplusArranger, OuluArranger, RafdArranger, \
     EmotionalStaticImgClassificationDataset, FerplusCrossEntropyClassificationDataset
 from base.checkpointer import ClassificationCheckpointer
@@ -13,7 +13,7 @@ from operator import itemgetter
 
 import torch
 from torch.utils import data
-from torch.nn import MSELoss
+
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Compose, Resize, RandomHorizontalFlip, RandomCrop, CenterCrop, RandomAffine, \
     ColorJitter, ToTensor, Normalize
@@ -44,13 +44,14 @@ class Experiment(GenericExperiment):
         self.num_epochs = args.num_epochs
         self.min_num_epochs = args.min_num_epochs
         self.topk_accuracy = args.topk_accuracy
-
+        self.batch_size = args.batch_size
         self.factor = args.factor
         self.patience = args.patience
         self.early_stopping = args.early_stopping
 
         self.milestone = [0]
         self.release_count = args.release_count
+        self.gradual_release = args.gradual_release
 
     def init_model(self):
 
@@ -140,11 +141,12 @@ class Experiment(GenericExperiment):
         else:
 
             if self.dataset == "ferp_ce":
-                train_dataset = FerplusCrossEntropyClassificationDataset(self.dataset_load_path, mode='train', transform=transform)
+                train_dataset = FerplusCrossEntropyClassificationDataset(self.dataset_load_path, mode='train',
+                                                                         transform=transform)
                 validate_dataset = FerplusCrossEntropyClassificationDataset(self.dataset_load_path, mode='validate',
-                                                                         transform=transform_val)
+                                                                            transform=transform_val)
                 test_dataset = FerplusCrossEntropyClassificationDataset(self.dataset_load_path, mode='test',
-                                                                         transform=transform_val)
+                                                                        transform=transform_val)
             else:
                 train_dataset = ImageFolder(os.path.join(self.dataset_load_path, 'train'),
                                             transform=transform)
@@ -162,14 +164,14 @@ class Experiment(GenericExperiment):
             sampler, sample_weights = init_weighted_sampler_and_weights(train_dataset)
 
         if sampler is None:
-            train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.config['batch_size'], shuffle=True)
+            train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.batch_size, shuffle=True)
         else:
-            train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.config['batch_size'], sampler=sampler)
+            train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.batch_size, sampler=sampler)
 
-        validate_loader = data.DataLoader(dataset=validate_dataset, batch_size=self.config['batch_size'])
+        validate_loader = data.DataLoader(dataset=validate_dataset, batch_size=self.batch_size)
         test_loader = None
         if test_dataset is not None:
-            test_loader = data.DataLoader(dataset=test_dataset, batch_size=self.config['batch_size'])
+            test_loader = data.DataLoader(dataset=test_dataset, batch_size=self.batch_size)
 
         dataloader_dict = {'train': train_loader, 'validate': validate_loader, 'test': test_loader}
         return dataloader_dict, sample_weights
@@ -187,7 +189,7 @@ class Experiment(GenericExperiment):
         transform_dict = self.init_transform()
         criterion = FocalLoss()
         if self.dataset == "ferp_ce":
-            criterion = MSELoss()
+            criterion = CrossEntropyLoss()
 
         for fold in iter(self.fold_to_run):
             fold_save_path = os.path.join(save_path, str(fold))
@@ -209,8 +211,8 @@ class Experiment(GenericExperiment):
                               min_learning_rate=self.min_learning_rate,
                               samples_weight=samples_weights)
 
-            parameter_controller = ParamControl(trainer, release_count=self.release_count,
-                                                backbone_mode=self.model_mode)
+            parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
+                                                release_count=self.release_count, backbone_mode=self.model_mode)
             checkpoint_controller = ClassificationCheckpointer(checkpoint_filename, trainer, parameter_controller,
                                                                resume=self.resume)
 

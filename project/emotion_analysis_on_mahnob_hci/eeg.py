@@ -126,7 +126,7 @@ class EegMahnob(GenericEegController):
         Assign the stimulated time interval for cropping.
         :return: (list), the list containing the time interval.
         """
-        crop_range = [[30. - 0.25, data.times.max() - 30 + self.buffer]]
+        crop_range = [[30. - self.window_sec / 2, data.times.max() - 30 + self.buffer]]
         return crop_range
 
     @staticmethod

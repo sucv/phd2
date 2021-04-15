@@ -27,11 +27,11 @@ if __name__ == '__main__':
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str, help='The path to the entire repository.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
-    parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
+    parser.add_argument('-resume', default=1, type=int, help='Resume from checkpoint?')
 
     # Models
     parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm')
-    parser.add_argument('-backbone_state_dict', default="model_state_dict_0.901", help='The filename for the backbone state dict.')
+    parser.add_argument('-backbone_state_dict', default="model_state_dict_0.853", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
     parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128, 128], nargs="+", type=int, help='The size for each channel')
@@ -68,8 +68,11 @@ if __name__ == '__main__':
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
+    parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=3, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
+
+    parser.add_argument('-save_plot', default=1, type=int, help='Whether to plot the session-wise output/target or not?')
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)

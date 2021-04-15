@@ -6,7 +6,7 @@ from base.video import combine_annotated_clips, change_video_fps
 from base.eeg import azim_proj
 from project.emotion_analysis_on_mahnob_hci.utils import read_start_end_from_mahnob_tsv, number_to_emotion_tag_dict, emotion_tag_to_arousal_class, emotion_tag_to_valence_class, arousal_class_to_number, valence_class_to_number
 from project.emotion_analysis_on_mahnob_hci.eeg import EegMahnob
-from project.emotion_analysis_on_mahnob_hci.regression.configs import config_mahnob as config
+
 
 import os
 import xml.etree.ElementTree as et
@@ -23,8 +23,8 @@ from PIL import Image
 
 
 class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
-    def __init__(self, opts):
-        super().__init__(opts)
+    def __init__(self, config):
+        super().__init__(config)
 
         self.filename_pattern = config['filename_pattern']
 
@@ -416,5 +416,5 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
 
 
 if __name__ == "__main__":
-
+    from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
     pre = PreprocessingMAHNOBHCI(config)

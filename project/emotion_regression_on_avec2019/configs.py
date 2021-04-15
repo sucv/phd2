@@ -1,4 +1,5 @@
 frame_size = 48
+crop_size = 40
 
 
 config_avec2019 = {
@@ -11,6 +12,7 @@ config_avec2019 = {
     "country_list": ["DE", "HU", "CN"],
     "emotion_dimension": ["Arousal", "Valence"],
     "frame_size": frame_size,
+    "crop_size": crop_size,
     "downsampling_interval_dict": {
         "frame": 5,
         "continuous_label": 1

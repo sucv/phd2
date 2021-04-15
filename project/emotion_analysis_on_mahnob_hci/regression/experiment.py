@@ -56,6 +56,7 @@ class Experiment(GenericExperiment):
         self.num_epochs = args.num_epochs
         self.min_num_epochs = args.min_num_epochs
         self.factor = args.factor
+        self.gradual_release = args.gradual_release
         self.release_count = args.release_count
 
         self.num_classes = args.num_classes
@@ -162,8 +163,8 @@ class Experiment(GenericExperiment):
                                               milestone=self.milestone, criterion=criterion, verbose=True,
                                               device=self.device)
 
-            parameter_controller = ParamControl(trainer, release_count=self.release_count,
-                                                backbone_mode=self.backbone_mode)
+            parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
+                                                release_count=self.release_count, backbone_mode=self.backbone_mode)
             checkpoint_controller = Checkpointer(checkpoint_filename, trainer, parameter_controller, resume=self.resume)
 
             if self.resume:

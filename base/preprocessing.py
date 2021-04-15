@@ -36,6 +36,7 @@ class GenericVideoPreprocessing(object):
         self.downsampling_interval_dict = opts['downsampling_interval_dict']
         self.target_fps = opts['target_fps']
         self.frame_size = opts['frame_size']
+        self.crop_size = opts['crop_size']
         self.openface_config = opts['openface_config']
         self.dataset_info = self.init_dataset_info()
 

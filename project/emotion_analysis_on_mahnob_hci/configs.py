@@ -2,18 +2,21 @@
 # They are supposed to be fixed except for frame_size and crop_size.
 
 frame_size = 48
+crop_size = 40
 
 config_mahnob = {
     "local_root_directory": r"E:\Mahnob_full",  # Local root for data preprocessing.
     "raw_data_folder": "Sessions",
     "openface_output_folder": "processed_{:d}".format(frame_size),
     "npy_folder": "compacted_{:d}".format(frame_size),
+    "emotion_dimension": ["Valence"],
     "downsampling_interval_dict": {
         "frame": 16,
         "eeg": 64,
         "continuous_label": 1
     },
     "frame_size": frame_size,
+    "crop_size": crop_size,
     "filename_pattern": {
         "continuous_label": "lable_continous_Mahnob.mat",
         "video": "P{}.+Section_{}.avi",

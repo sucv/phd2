@@ -50,6 +50,7 @@ class Experiment(GenericExperiment):
         self.min_num_epochs = args.min_num_epochs
         self.factor = args.factor
         self.release_count = args.release_count
+        self.gradual_release = args.gradual_release
 
         self.num_classes = args.num_classes
         self.emotion_dimension = args.emotion_dimension
@@ -157,8 +158,8 @@ class Experiment(GenericExperiment):
                                             patience=self.patience, early_stopping=self.early_stopping,
                                             min_learning_rate=self.min_learning_rate, samples_weight=None)
 
-            parameter_controller = ParamControl(trainer, release_count=self.release_count,
-                                                backbone_mode=self.backbone_mode)
+            parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
+                                                release_count=self.release_count, backbone_mode=self.backbone_mode)
             checkpoint_controller = ClassificationCheckpointer(checkpoint_filename, trainer, parameter_controller,
                                                                resume=self.resume)
 

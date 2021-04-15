@@ -20,8 +20,9 @@ class GenericParamControl(object):
 
 
 class ResnetParamControl(GenericParamControl):
-    def __init__(self, trainer, release_count=8, backbone_mode="ir"):
+    def __init__(self, trainer, gradual_release=1, release_count=8, backbone_mode="ir"):
         self.trainer = trainer
+        self.gradual_release = gradual_release,
         self.release_count = release_count
         self.backbone_mode = backbone_mode
         self.module_list = self.init_module_list()
@@ -61,17 +62,18 @@ class ResnetParamControl(GenericParamControl):
         return current_lr
 
     def release_param(self):
-        if self.release_count > 0:
-            indices = self.get_param_group()
+        if self.gradual_release:
+            if self.release_count > 0:
+                indices = self.get_param_group()
 
-            for param in list(itemgetter(*indices)(list(self.trainer.model.parameters()))):
-                param.requires_grad = True
+                for param in list(itemgetter(*indices)(list(self.trainer.model.parameters()))):
+                    param.requires_grad = True
 
-            self.trainer.init_optimizer_and_scheduler()
-            self.release_count -= 1
-        else:
-            print("Early stopped since no further parameters to release!")
-            self.early_stop = True
+                self.trainer.init_optimizer_and_scheduler()
+                self.release_count -= 1
+            else:
+                print("Early stopped since no further parameters to release!")
+                self.early_stop = True
 
     def load_trainer(self, trainer):
         self.trainer = trainer

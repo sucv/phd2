@@ -60,9 +60,8 @@ singularity run --nv --bind ~/scratch/dataset/:/media/ \
         -dataset_load_path "/scratch/users/ntu/su012/dataset/fer+/cross_entropy" \
         -model_save_path "/scratch/users/ntu/su012/trained_model" \
         -python_package_path "/home/users/ntu/su012/phd2" \
+	    -release_count $rc -stamp $s \
         > main_log
-
-        -high_performance_cluster $hpc -stamp $s -r $resume > main_log
 
 ### Let us call the command above as "the long version".
 ### A simplified "short version" of the command is

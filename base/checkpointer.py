@@ -72,20 +72,21 @@ class ClassificationCheckpointer(GenericCheckpointer):
 
         # Record the arguments.
         arguments_dict = vars(args)
-        arguments_dict = pd.json_normalize(arguments_dict, sep='_')
-
-        df_args = pd.DataFrame(data=arguments_dict)
-        df_args.to_csv(self.trainer.csv_filename, index=False)
-
-        config = pd.json_normalize(config, sep='_')
-        df_config = pd.DataFrame(data=config)
-        df_config.to_csv(self.trainer.csv_filename, mode='a', index=False)
+        self.print_dict(arguments_dict)
+        self.print_dict(config)
 
         self.columns = ['time', 'epoch', 'best_epoch', 'layer_to_update', 'lr',
                         'tr_loss', 'val_loss', 'tr_acc', 'val_acc', 'tr_kappa', 'val_kappa', 'tr_conf_mat', 'val_conf_mat']
 
         df = pd.DataFrame(columns=self.columns)
         df.to_csv(self.trainer.csv_filename, mode='a', index=False)
+
+    def print_dict(self, data_dict):
+        for key, value in data_dict.items():
+            csv_records = [str(key) + " = " + str(value)]
+            row_df = pd.DataFrame(data=csv_records)
+            row_df.T.to_csv(self.trainer.csv_filename, mode='a', index=False, header=False, sep=' ')
+
 
 
 

@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance computing server or not?')
-    parser.add_argument('-stamp', default='test_sam', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test_dict', type=str, help='To indicate different experiment instances')
 
     # Path for Python code, model, datasets
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/fer+/cross_entropy', type=str,
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('-topk_accuracy', default=1, type=int, help='Whether the top k inferences covered the label?')
     parser.add_argument('-min_num_epochs', default=10, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-use_weighted_sampler', default=1, type=int, help='Whether to balance the samples of each classes using weighted sampler?')
+    parser.add_argument('-batch_size', default=32, type=int, help='The batch-size.')
 
     # Scheduler
     parser.add_argument('-patience', default=20, type=int, help='The number of epoch to run before changing the learning rate.')
@@ -44,6 +45,7 @@ if __name__ == '__main__':
     parser.add_argument('-early_stopping', default=7000, type=int, help='If no improvement, the number of epoch to run before halting the training')
 
     # Parameter Control
+    parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=11, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
 
