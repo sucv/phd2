@@ -60,8 +60,8 @@ config_ferplus = {
     "state_dict_setting": state_dict_setting,
     "resize": img_size,
     "center_crop": crop_size,
-    "mean": [0.5, 0.5, 0.5],
-    "std": [0.5, 0.5, 0.5],
+    "mean": [0.5077, 0.5077, 0.5077],
+    "std": [0.2544, 0.2544, 0.2544],
     "num_classes": 8,
     "batch_size": 32,
     "use_weighted_sampler": False

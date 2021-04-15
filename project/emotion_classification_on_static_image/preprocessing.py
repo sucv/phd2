@@ -256,6 +256,11 @@ class PreprocessingFerPlus(PreprocessingFER2013):
                                 npy_test_label.append(emotion)
 
             npy_train = np.stack(npy_train)
+            # Calculate mean and std for further training
+            # all_pixel = npy_train[:, :, :, 0] / 255
+            # mean = np.mean(all_pixel)
+            # std = np.std(all_pixel)
+            # mean: 0.5077, std: 0.2544
             npy_train_label = np.stack(npy_train_label)
             np.save(os.path.join(self.output_directory, 'train_data.npy'), npy_train)
             np.save(os.path.join(self.output_directory, 'train_data_label.npy'), npy_train_label)

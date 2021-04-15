@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='compare_haifeng', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='avec2019', type=str, help='The dataset name.')
 
     # Dataset
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str, help='The path to the entire repository.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
-    parser.add_argument('-resume', default=1, type=int, help='Resume from checkpoint?')
+    parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     # Models
     parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm')
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('-head', default="mh", help='Output 2 dimensions or 1? mh: multi-headed, sh: single-headed')
     parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=100, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-num_epochs', default=200, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-min_num_epochs', default=10, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
     parser.add_argument('-early_stopping', default=20, type=int, help='If no improvement, the number of epoch to run before halting the training')
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=3, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
-    parser.add_argument('-load_best_at_each_epoch', default=0, type=int,
+    parser.add_argument('-load_best_at_each_epoch', default=1, type=int,
                         help='Whether to load the best model state at the end of each epoch?')
 
     parser.add_argument('-save_plot', default=1, type=int, help='Whether to plot the session-wise output/target or not?')
