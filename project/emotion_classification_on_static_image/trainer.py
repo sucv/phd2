@@ -1,4 +1,5 @@
 from base.trainer import ClassificationTrainer
+from base.loss_function import CrossEntropyLoss
 
 from tqdm import tqdm
 
@@ -6,7 +7,6 @@ from sklearn.metrics import accuracy_score, cohen_kappa_score
 import numpy as np
 import torch
 from torch import optim
-from torch.nn import MSELoss
 
 
 class Trainer(ClassificationTrainer):
@@ -15,8 +15,9 @@ class Trainer(ClassificationTrainer):
         self.optimizer = optim.SGD(self.get_parameters(), lr=self.learning_rate, weight_decay=0.0001, momentum=0.9)
 
         mode = 'max'
-        if isinstance(self.criterion, MSELoss):
+        if isinstance(self.criterion, CrossEntropyLoss):
             mode = 'min'
+
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode, patience=self.patience,
                                                                     factor=self.factor)
 

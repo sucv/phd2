@@ -58,6 +58,7 @@ class Experiment(GenericExperiment):
         self.factor = args.factor
         self.gradual_release = args.gradual_release
         self.release_count = args.release_count
+        self.load_best_at_each_epoch = args.load_best_at_each_epoch
 
         self.num_classes = args.num_classes
         self.emotion_dimension = args.emotion_dimension
@@ -159,7 +160,7 @@ class Experiment(GenericExperiment):
             trainer = MAHNOBRegressionTrainer(model, stamp=self.stamp, model_name=self.model_name,
                                               learning_rate=self.learning_rate, metrics=self.metrics,
                                               save_path=fold_save_path, early_stopping=self.early_stopping,
-                                              patience=self.patience, factor=self.factor,
+                                              patience=self.patience, factor=self.factor, load_best_at_each_epoch=self.load_best_at_each_epoch,
                                               milestone=self.milestone, criterion=criterion, verbose=True,
                                               device=self.device)
 
@@ -172,10 +173,11 @@ class Experiment(GenericExperiment):
             else:
                 checkpoint_controller.init_csv_logger(self.args, self.config)
 
-            trainer.fit(dataloaders_dict, lengths_dict, num_epochs=self.num_epochs, min_num_epoch=self.min_num_epochs,
-                        save_model=True, parameter_controller=parameter_controller,
-                        checkpoint_controller=checkpoint_controller)
+            if not trainer.fit_finished:
+                trainer.fit(dataloaders_dict, lengths_dict, num_epochs=self.num_epochs, min_num_epoch=self.min_num_epochs,
+                            save_model=True, parameter_controller=parameter_controller,
+                            checkpoint_controller=checkpoint_controller)
 
-            trainer.test(dataloaders_dict, lengths_dict, checkpoint_controller)
-
-            checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)
+            if not trainer.fold_finished:
+                trainer.test(dataloaders_dict, lengths_dict, checkpoint_controller)
+                checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)

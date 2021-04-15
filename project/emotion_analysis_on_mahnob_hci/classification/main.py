@@ -14,11 +14,11 @@ if __name__ == '__main__':
     parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_image'], nargs="*", help='frame, eeg_image')
-    parser.add_argument('-resume', default=0, help='Resume from checkpoint?')
+    parser.add_argument('-resume', default=1, help='Resume from checkpoint?')
 
     # N-fold settings
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[9], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[0], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     # Path for Python code, model, datasets
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str, help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
@@ -34,12 +34,10 @@ if __name__ == '__main__':
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.901",
                         help='The filename for the backbone state dict.')
-    parser.add_argument('-output_dim', default=1, type=int, help='The output dimension for the spatial model.')
 
     # Groundtruth settings
     parser.add_argument('-num_classes', default=3, type=int, help='The number of classes for the dataset.')
     parser.add_argument('-emotion_dimension', default=["Valence"], nargs="*", help='The emotion dimension to analysis.')
-    parser.add_argument('-metrics', default=["rmse", "pcc", "ccc"], nargs="*", help='The evaluation metrics.')
 
     # Dataloader settings
     parser.add_argument('-window_length', default=24, type=int, help='The length in second to windowing the data.')
@@ -47,19 +45,20 @@ if __name__ == '__main__':
     parser.add_argument('-continuous_label_frequency', default=4, type=int, help='The frequency of the continuous label.')
     parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
     parser.add_argument('-crop_size', default=crop_size, type=int, help='The size to conduct the cropping.')
-    parser.add_argument('-batch_size', default=3, type=int)
+    parser.add_argument('-batch_size', default=2, type=int)
 
     # Training settings
     parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=100, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-num_epochs', default=200, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-min_num_epochs', default=0, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
-    parser.add_argument('-early_stopping', default=50, type=int, help='If no improvement, the number of epoch to run before halting the training')
+    parser.add_argument('-early_stopping', default=30, type=int, help='If no improvement, the number of epoch to run before halting the training')
+    parser.add_argument('-load_best_at_each_epoch', default=0, type=int, help='Whether to load the best model state at the end of each epoch?')
 
     # Scheduler and Parameter Control
-    parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
-    parser.add_argument('-factor', default=0.4, type=float, help='The multiplier to decrease the learning rate.')
+    parser.add_argument('-patience', default=10, type=int, help='Patience for learning rate changes.')
+    parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
     parser.add_argument('-gradual_release', default=0, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=3, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')

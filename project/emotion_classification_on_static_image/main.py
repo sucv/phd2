@@ -48,6 +48,8 @@ if __name__ == '__main__':
     parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=11, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
+    parser.add_argument('-load_best_at_each_epoch', default=0, type=int,
+                        help='Whether to load the best model state at the end of each epoch?')
 
     args = parser.parse_args()
 

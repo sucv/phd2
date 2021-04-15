@@ -55,7 +55,7 @@ cd "$PBS_O_WORKDIR" || exit $?
 
 singularity run --nv --bind ~/scratch/dataset/:/media/ \
         ~/scratch/pth_er.sif python ~/phd2/project/emotion_classification_on_static_image/main.py \
-        -dataset $d -resume $r -high_performance_cluster 1 \
+        -dataset $d -resume $r -factor $f -batch_size $bs -high_performance_cluster 1 \
         -model_load_path "/scratch/users/ntu/su012/pretrained_model" \
         -dataset_load_path "/scratch/users/ntu/su012/dataset/fer+/cross_entropy" \
         -model_save_path "/scratch/users/ntu/su012/trained_model" \

@@ -18,7 +18,8 @@ from sklearn.metrics import accuracy_score
 class MAHNOBRegressionTrainer(GenericTrainer):
     def __init__(self, model, model_name='2d1d', save_path=None, max_epoch=100,
                  early_stopping=30, criterion=None, milestone=[0], patience=10, factor=0.1, learning_rate=0.00001, device='cpu',
-                 emotional_dimension=['Valence'], metrics=None, verbose=False, print_training_metric=False, **kwargs):
+                 emotional_dimension=['Valence'], metrics=None, verbose=False, print_training_metric=False,
+                 load_best_at_each_epoch=False, **kwargs):
 
         # The device to use.
         super().__init__(model=model, model_name=model_name, save_path=save_path, criterion=criterion,
@@ -63,6 +64,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         self.test_losses = []
         self.csv_filename = None
         self.best_epoch_info = None
+        self.load_best_at_each_epoch = load_best_at_each_epoch
 
     def train(self, data_loader, length_to_track, epoch):
         self.model.train()
@@ -130,6 +132,12 @@ class MAHNOBRegressionTrainer(GenericTrainer):
 
         # Loop the epochs
         for epoch in np.arange(start_epoch, num_epochs):
+
+            if self.fit_finished:
+                if self.verbose:
+                    print("\nEarly Stop!\n")
+                break
+
             if parameter_controller.get_current_lr() < 1e-6:
 
                 parameter_controller.release_param()
@@ -182,19 +190,6 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                     }
                 }
 
-            # Early stopping controller.
-            if self.early_stopping and epoch > min_num_epoch:
-                if improvement:
-                    self.early_stopping_counter = self.early_stopping
-                else:
-                    self.early_stopping_counter -= 1
-
-                if self.early_stopping_counter <= 0:
-                    self.fit_finished = True
-                    if self.verbose:
-                        print("\nEarly Stop!!")
-                    break
-
             if validate_loss < 0:
                 print('validate loss negative')
 
@@ -219,17 +214,27 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             checkpoint_controller.save_log_to_csv(
                 epoch, train_record_dict['overall'], validate_record_dict['overall'])
 
-            self.scheduler.step(validate_ccc)
+            # Early stopping controller.
+            if self.early_stopping and epoch > min_num_epoch:
+                if improvement:
+                    self.early_stopping_counter = self.early_stopping
+                else:
+                    self.early_stopping_counter -= 1
 
+                if self.early_stopping_counter <= 0:
+                    self.fit_finished = True
+
+            self.scheduler.step(validate_ccc)
             self.start_epoch = epoch + 1
+
+            if self.load_best_at_each_epoch:
+                self.model.load_state_dict(self.best_epoch_info['model_weights'])
+
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
         self.fit_finished = True
         checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
         self.model.load_state_dict(self.best_epoch_info['model_weights'])
-
-        if save_model:
-            torch.save(self.model.state_dict(), os.path.join(self.save_path, "model_state_dict.pth"))
 
     def loop(self, data_loader, length_to_track, epoch, train_mode=True):
         running_loss = 0.0

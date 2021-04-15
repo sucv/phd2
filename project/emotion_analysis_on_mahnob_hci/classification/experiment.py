@@ -31,7 +31,6 @@ class Experiment(GenericExperiment):
 
         self.backbone_mode = args.backbone_mode
         self.backbone_state_dict_frame = args.backbone_state_dict_frame
-        self.output_dim = args.output_dim
 
         self.window_length = args.window_length
         self.hop_size = args.hop_size
@@ -51,10 +50,10 @@ class Experiment(GenericExperiment):
         self.factor = args.factor
         self.release_count = args.release_count
         self.gradual_release = args.gradual_release
+        self.load_best_at_each_epoch = args.load_best_at_each_epoch
 
         self.num_classes = args.num_classes
         self.emotion_dimension = args.emotion_dimension
-        self.metrics = args.metrics
 
         self.device = self.init_device()
 
@@ -132,8 +131,8 @@ class Experiment(GenericExperiment):
         fold_arranger = NFoldMahnobArranger(dataset_load_path=self.dataset_load_path, dataset_folder=self.dataset_folder,
                                             include_session_having_no_continuous_label=self.include_session_having_no_continuous_label, modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
-        subject_id_of_all_folds = [[1, 6, 3], [2, 9, 16], [4, 25, 10], [5, 7, 8], [13, 14, 17], [18, 19, 20], [21, 22],
-                                   [23, 24], [27, 28], [29, 30]]
+        # subject_id_of_all_folds = [[1, 6, 3], [2, 9, 16], [4, 25, 10], [5, 7, 8], [13, 14, 17], [18, 19, 20], [21, 22],
+        #                            [23, 24], [27, 28], [29, 30]]
         print(subject_id_of_all_folds)
         class_labels = self.init_class_label()
         model = self.init_model()
@@ -168,10 +167,12 @@ class Experiment(GenericExperiment):
             else:
                 checkpoint_controller.init_csv_logger(self.args, self.config)
 
-            trainer.fit(dataloaders_dict, num_epochs=self.num_epochs, topk_accuracy=1,
-                        min_num_epochs=self.min_num_epochs, save_model=True,
-                        parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
-            trainer.test(data_to_load=dataloaders_dict, topk_accuracy=1,
-                         checkpoint_controller=checkpoint_controller)
+            if not trainer.fit_finished:
+                trainer.fit(dataloaders_dict, num_epochs=self.num_epochs, topk_accuracy=1,
+                            min_num_epochs=self.min_num_epochs, save_model=True,
+                            parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
 
-            checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)
+            if not trainer.fold_finished:
+                trainer.test(data_to_load=dataloaders_dict, topk_accuracy=1,
+                             checkpoint_controller=checkpoint_controller)
+                checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)

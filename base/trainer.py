@@ -3,6 +3,8 @@ import time
 import copy
 from tqdm import tqdm
 
+from base.loss_function import CrossEntropyLoss
+
 import numpy as np
 import torch
 from torch import optim
@@ -104,7 +106,7 @@ class GenericTrainer(object):
 class ClassificationTrainer(GenericTrainer):
     def __init__(self, model, model_name='', save_path='', milestone=[0], modality=['frame'], fold=0, max_epoch=2000,
                  criterion=None, learning_rate=0.001, device='cpu', num_classes=6, patience=20, early_stopping=100,
-                 factor=0.1, verbose=True, min_learning_rate=1e-5, **kwargs):
+                 factor=0.1, verbose=True, min_learning_rate=1e-5, load_best_at_each_epoch=False, **kwargs):
         super().__init__(model, model_name=model_name, save_path=save_path, criterion=criterion,
                          min_learning_rate=min_learning_rate,
                          learning_rate=learning_rate, device=device, num_classes=num_classes,
@@ -135,6 +137,7 @@ class ClassificationTrainer(GenericTrainer):
         self.test_kappa = -1
         self.test_confusion_matrix = 0
         self.csv_filename = ''
+        self.load_best_at_each_epoch = load_best_at_each_epoch
         self.best_epoch_info = {}
 
     def train(self, data_loader, topk_accuracy):
@@ -185,6 +188,11 @@ class ClassificationTrainer(GenericTrainer):
 
         for epoch in np.arange(start_epoch, num_epochs):
 
+            if self.fit_finished:
+                if self.verbose:
+                    print("\nEarly Stop!\n")
+                break
+
             time_epoch_start = time.time()
 
             if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
@@ -232,17 +240,6 @@ class ClassificationTrainer(GenericTrainer):
                 if save_model:
                     torch.save(self.model.state_dict(), current_save_path)
 
-            if self.early_stopping and epoch > min_num_epochs:
-                if improvement:
-                    self.early_stopping_counter = self.early_stopping
-                else:
-                    self.early_stopping_counter -= 1
-
-                if self.early_stopping_counter <= 0:
-                    if self.verbose:
-                        print("\nEarly Stop!\n")
-                    break
-
             if validate_loss < 0:
                 print('\nVal loss negative!\n')
                 break
@@ -270,15 +267,26 @@ class ClassificationTrainer(GenericTrainer):
 
             checkpoint_controller.save_log_to_csv(epoch)
 
-            if isinstance(self.criterion, MSELoss):
+            if self.early_stopping and self.start_epoch > min_num_epochs:
+                if improvement:
+                    self.early_stopping_counter = self.early_stopping
+                else:
+                    self.early_stopping_counter -= 1
+
+                if self.early_stopping_counter <= 0:
+                    self.fit_finished = True
+
+            if isinstance(self.criterion, CrossEntropyLoss):
                 self.scheduler.step(validate_loss)
             else:
                 self.scheduler.step(validate_acc)
 
             self.start_epoch = epoch + 1
-            checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
-            # self.model.load_state_dict(self.best_epoch_info['model_weights'])
+            if self.load_best_at_each_epoch:
+                self.model.load_state_dict(self.best_epoch_info['model_weights'])
+
+            checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
         self.fit_finished = True
         checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)

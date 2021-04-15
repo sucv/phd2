@@ -52,6 +52,7 @@ class Experiment(GenericExperiment):
         self.milestone = [0]
         self.release_count = args.release_count
         self.gradual_release = args.gradual_release
+        self.load_best_at_each_epoch = args.load_best_at_each_epoch
 
     def init_model(self):
 
@@ -209,7 +210,7 @@ class Experiment(GenericExperiment):
                               learning_rate=self.learning_rate, fold=fold, milestone=milestone,
                               patience=self.patience, early_stopping=self.early_stopping,
                               min_learning_rate=self.min_learning_rate,
-                              samples_weight=samples_weights)
+                              samples_weight=samples_weights, load_best_at_each_epoch=self.load_best_at_each_epoch)
 
             parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
                                                 release_count=self.release_count, backbone_mode=self.model_mode)
@@ -221,10 +222,11 @@ class Experiment(GenericExperiment):
             else:
                 checkpoint_controller.init_csv_logger(self.args, self.config)
 
-            trainer.fit(dataloader_dict, num_epochs=self.num_epochs, topk_accuracy=self.topk_accuracy,
-                        min_num_epochs=self.min_num_epochs, save_model=self.save_model,
-                        parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
+            if not trainer.fit_finished:
+                trainer.fit(dataloader_dict, num_epochs=self.num_epochs, topk_accuracy=self.topk_accuracy,
+                            min_num_epochs=self.min_num_epochs, save_model=self.save_model,
+                            parameter_controller=parameter_controller, checkpoint_controller=checkpoint_controller)
 
-            if dataloader_dict['test'] is not None:
+            if dataloader_dict['test'] is not None and not trainer.fold_finished:
                 trainer.test(data_to_load=dataloader_dict, topk_accuracy=1, checkpoint_controller=checkpoint_controller)
                 checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)

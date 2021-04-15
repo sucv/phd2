@@ -61,6 +61,8 @@ class Experiment(GenericExperiment):
         self.metrics = args.metrics
         self.release_count = args.release_count
         self.gradual_release = args.gradual_release
+        self.load_best_at_each_epoch = args.load_best_at_each_epoch
+
         self.save_plot = args.save_plot
         self.device = self.init_device()
 
@@ -146,7 +148,7 @@ class Experiment(GenericExperiment):
         trainer = AVEC2019Trainer(model, model_name=self.model_name, learning_rate=self.learning_rate,
                                   metrics=self.metrics, save_path=save_path, early_stopping=self.early_stopping,
                                   train_emotion=self.train_emotion, patience=self.patience, factor=self.factor,
-                                  emotional_dimension=self.emotion_dimension, head=self.head,
+                                  emotional_dimension=self.emotion_dimension, head=self.head, load_best_at_each_epoch=self.load_best_at_each_epoch,
                                   milestone=self.milestone, criterion=criterion, verbose=True, save_plot=self.save_plot, device=self.device)
 
         parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
@@ -159,6 +161,7 @@ class Experiment(GenericExperiment):
         else:
             checkpoint_controller.init_csv_logger(self.args, self.config)
 
-        trainer.fit(dataloader_dict, length_dict, num_epochs=self.num_epochs, min_num_epochs=self.min_num_epochs,
-                    save_model=True, parameter_controller=parameter_controller,
-                    checkpoint_controller=checkpoint_controller)
+        if not trainer.fit_finished:
+            trainer.fit(dataloader_dict, length_dict, num_epochs=self.num_epochs, min_num_epochs=self.min_num_epochs,
+                        save_model=True, parameter_controller=parameter_controller,
+                        checkpoint_controller=checkpoint_controller)
