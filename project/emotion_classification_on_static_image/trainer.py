@@ -63,4 +63,4 @@ class Trainer(ClassificationTrainer):
         epoch_kappa = cohen_kappa_score(y_true, y_pred)
         epoch_confusion_matrix = self.calculate_confusion_matrix(y_pred, y_true)
 
-        return epoch_loss, np.round(epoch_acc.item(), 3), epoch_kappa, epoch_confusion_matrix
+        return epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix

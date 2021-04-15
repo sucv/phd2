@@ -246,7 +246,7 @@ class ClassificationTrainer(GenericTrainer):
 
             if self.verbose:
                 print(
-                    "Fold {:2} Epoch {:2} in {:.0f}s || Train loss={:.3f}, acc={:.3f}, kappa={:.3f} | Val loss={:.3f}, acc={:.3f}, , kappa={:.3f} | LR={:.1e} | best={} | best_acc={} | best_kappa={} | release_count={:2} | improvement={}-{}".format(
+                    "Fold {:2} Epoch {:2} in {:.0f}s || Train loss={:.3f}, acc={:.3f}, kappa={:.3f} | Val loss={:.3f}, acc={:.3f}, kappa={:.3f} | LR={:.1e} | best={} | best_acc={:.3f} | best_kappa={:.3f} | release_count={:2} | improvement={}-{}".format(
                         self.fold,
                         epoch + 1,
                         time.time() - time_epoch_start,
@@ -332,4 +332,4 @@ class ClassificationTrainer(GenericTrainer):
         epoch_kappa = cohen_kappa_score(y_true, y_pred)
         epoch_confusion_matrix = self.calculate_confusion_matrix(y_pred, y_true)
 
-        return epoch_loss, np.round(epoch_acc.item(), 3), epoch_kappa, epoch_confusion_matrix
+        return epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix
