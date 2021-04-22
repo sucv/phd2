@@ -318,7 +318,7 @@ class MAHNOBDataset(Dataset):
         self.class_label = class_labels
 
     def get_3D_transforms(self):
-        normalize = transforms3D.GroupNormalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        normalize = transforms3D.GroupNormalize([0.5077, 0.5077, 0.5077], [0.2544, 0.2544, 0.2544])
         normalize_eeg_image = transforms3D.GroupNormalize([0.5, 0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
 
         if self.mode == 'train':

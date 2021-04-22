@@ -19,7 +19,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
     def __init__(self, model, model_name='2d1d', save_path=None, max_epoch=100,
                  early_stopping=30, criterion=None, milestone=[0], patience=10, factor=0.1, learning_rate=0.00001, device='cpu',
                  emotional_dimension=['Valence'], metrics=None, verbose=False, print_training_metric=False,
-                 load_best_at_each_epoch=False, **kwargs):
+                 load_best_at_each_epoch=False, save_plot=0, **kwargs):
 
         # The device to use.
         super().__init__(model=model, model_name=model_name, save_path=save_path, criterion=criterion,
@@ -65,6 +65,8 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         self.csv_filename = None
         self.best_epoch_info = None
         self.load_best_at_each_epoch = load_best_at_each_epoch
+
+        self.save_plot = save_plot
 
     def train(self, data_loader, length_to_track, epoch):
         self.model.train()
@@ -138,7 +140,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                     print("\nEarly Stop!\n")
                 break
 
-            if parameter_controller.get_current_lr() < 1e-6:
+            if parameter_controller.get_current_lr() < self.min_learning_rate:
 
                 parameter_controller.release_param()
                 self.model.load_state_dict(self.best_epoch_info['model_weights'])
@@ -300,12 +302,13 @@ class MAHNOBRegressionTrainer(GenericTrainer):
         metric_handler.calculate_metrics()
         epoch_result_dict = metric_handler.metric_record_dict
 
-        # This object plot the figures and save them.
-        plot_handler = PlotHandler(self.metrics, self.emotional_dimension, epoch_result_dict,
-                                   output_handler.sessionwise_dict, continuous_label_handler.sessionwise_dict,
-                                   epoch=epoch, train_mode=train_mode,
-                                   directory_to_save_plot=self.save_path)
-        plot_handler.save_output_vs_continuous_label_plot()
+        if self.save_plot:
+            # This object plot the figures and save them.
+            plot_handler = PlotHandler(self.metrics, self.emotional_dimension, epoch_result_dict,
+                                       output_handler.sessionwise_dict, continuous_label_handler.sessionwise_dict,
+                                       epoch=epoch, train_mode=train_mode,
+                                       directory_to_save_plot=self.save_path)
+            plot_handler.save_output_vs_continuous_label_plot()
 
         return epoch_loss, epoch_result_dict
 

@@ -13,6 +13,7 @@ class Trainer(ClassificationTrainer):
 
     def init_optimizer_and_scheduler(self):
         self.optimizer = optim.SGD(self.get_parameters(), lr=self.learning_rate, weight_decay=0.0001, momentum=0.9)
+        # self.optimizer = optim.Adam(self.get_parameters(), lr=self.learning_rate, weight_decay=0.001)
 
         mode = 'max'
         if isinstance(self.criterion, CrossEntropyLoss):

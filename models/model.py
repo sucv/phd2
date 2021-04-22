@@ -59,7 +59,8 @@ class my_res50(nn.Module):
 
 
 class my_res50_tempool(nn.Module):
-    def __init__(self, backbone_mode="ir", state_dict_name='', embedding_dim=512, input_channels=5, output_dim=1, root_dir='', use_pretrained=False):
+    def __init__(self, backbone_mode="ir", state_dict_name='', embedding_dim=512, input_channels=5, output_dim=1,
+                 root_dir='', use_pretrained=False):
         super().__init__()
 
         self.backbone = my_res50(
@@ -97,6 +98,7 @@ class my_2d1d(nn.Module):
         self.kernel_size = kernel_size
         self.dropout = dropout
 
+
     def init(self, fold=None):
         path = os.path.join(self.root_dir, self.backbone_state_dict + ".pth")
 
@@ -107,7 +109,8 @@ class my_2d1d(nn.Module):
 
             spatial.load_state_dict(state_dict)
         elif 'eeg_image' in self.modality:
-            spatial = my_res50(mode=self.backbone_mode, root_dir=self.root_dir, use_pretrained=False, num_classes=3, input_channels=6)
+            spatial = my_res50(mode=self.backbone_mode, root_dir=self.root_dir, use_pretrained=False, num_classes=3,
+                               input_channels=6)
 
             if fold is not None:
                 path = os.path.join(self.root_dir, self.backbone_state_dict + "_" + str(fold) + ".pth")
@@ -123,8 +126,13 @@ class my_2d1d(nn.Module):
 
         self.spatial = spatial.backbone
         self.temporal = TemporalConvNet(
-            num_inputs=self.embedding_dim, num_channels=self.channels, kernel_size=self.kernel_size, dropout=self.dropout)
+            num_inputs=self.embedding_dim, num_channels=self.channels, kernel_size=self.kernel_size,
+            dropout=self.dropout)
         self.regressor = nn.Linear(self.embedding_dim // 4, self.output_dim)
+        # self.regressor = Sequential(
+        #     BatchNorm1d(self.embedding_dim // 4),
+        #     Dropout(0.4),
+        #     Linear(self.embedding_dim // 4, self.output_dim))
 
     def forward(self, x):
         num_batches, length, channel, width, height = x.shape

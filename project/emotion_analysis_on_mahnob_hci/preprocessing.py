@@ -414,7 +414,6 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
         save_pkl_file(self.root_directory, "class_label.pkl", emotion_dict)
 
 
-
 if __name__ == "__main__":
     from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
     pre = PreprocessingMAHNOBHCI(config)

@@ -169,7 +169,7 @@ class Experiment(GenericExperiment):
         else:
             train_loader = data.DataLoader(dataset=train_dataset, batch_size=self.batch_size, sampler=sampler)
 
-        validate_loader = data.DataLoader(dataset=validate_dataset, batch_size=self.batch_size)
+        validate_loader = data.DataLoader(dataset=validate_dataset, batch_size=self.batch_size, drop_last=True)
         test_loader = None
         if test_dataset is not None:
             test_loader = data.DataLoader(dataset=test_dataset, batch_size=self.batch_size)

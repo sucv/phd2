@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='compare_haifeng', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test_trans', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='avec2019', type=str, help='The dataset name.')
 
     # Dataset
@@ -30,8 +30,8 @@ if __name__ == '__main__':
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     # Models
-    parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm')
-    parser.add_argument('-backbone_state_dict', default="model_state_dict_0.853", help='The filename for the backbone state dict.')
+    parser.add_argument('-model_name', default="2dlstm", help='Model: 2d1d, 2dlstm')
+    parser.add_argument('-backbone_state_dict', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
     parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128, 128], nargs="+", type=int, help='The size for each channel')
@@ -71,10 +71,10 @@ if __name__ == '__main__':
     parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=3, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
-    parser.add_argument('-load_best_at_each_epoch', default=1, type=int,
+    parser.add_argument('-load_best_at_each_epoch', default=0, type=int,
                         help='Whether to load the best model state at the end of each epoch?')
 
-    parser.add_argument('-save_plot', default=1, type=int, help='Whether to plot the session-wise output/target or not?')
+    parser.add_argument('-save_plot', default=0, type=int, help='Whether to plot the session-wise output/target or not?')
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)

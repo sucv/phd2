@@ -1,4 +1,4 @@
-from base.experiment import GenericExperiment
+from project.emotion_analysis_on_mahnob_hci.regression.experiment import Experiment
 from models.model import my_2d1d, my_2dlstm
 from base.dataset import NFoldMahnobArranger, MAHNOBDataset
 from project.emotion_analysis_on_mahnob_hci.regression.checkpointer import Checkpointer
@@ -16,83 +16,34 @@ import torch.nn
 from torch.utils import data
 
 
-class Experiment(GenericExperiment):
+class KnowledgeDistillationRegressionExperiment(Experiment):
     def __init__(self, args):
         super().__init__(args)
 
-        self.num_folds = args.num_folds
-        self.folds_to_run = args.folds_to_run
-        self.include_session_having_no_continuous_label = 0
-
-        self.stamp = args.stamp
-
-        self.modality = args.modality
-        self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[0] + "_" + self.stamp
-        self.backbone_state_dict_frame = args.backbone_state_dict_frame
-        self.backbone_state_dict_eeg = args.backbone_state_dict_eeg
-        self.backbone_mode = args.backbone_mode
-
-        self.cnn1d_embedding_dim = args.cnn1d_embedding_dim
-        self.cnn1d_channels = args.cnn1d_channels
-        self.cnn1d_kernel_size = args.cnn1d_kernel_size
-        self.cnn1d_dropout = args.cnn1d_dropout
-        self.lstm_embedding_dim = args.lstm_embedding_dim
-        self.lstm_hidden_dim = args.lstm_hidden_dim
-        self.lstm_dropout = args.lstm_dropout
-
-        self.window_length = args.window_length
-        self.hop_size = args.hop_size
-        self.continuous_label_frequency = args.continuous_label_frequency
-        self.frame_size = args.frame_size
-        self.crop_size = args.crop_size
-        self.batch_size = args.batch_size
-
-        self.milestone = args.milestone
-        self.learning_rate = args.learning_rate
-        self.min_learning_rate = args.min_learning_rate
-        self.early_stopping = args.early_stopping
-        self.patience = args.patience
-        self.time_delay = args.time_delay
-        self.num_epochs = args.num_epochs
-        self.min_num_epochs = args.min_num_epochs
-        self.factor = args.factor
-        self.gradual_release = args.gradual_release
-        self.release_count = args.release_count
-        self.load_best_at_each_epoch = args.load_best_at_each_epoch
-
-        self.num_classes = args.num_classes
-        self.emotion_dimension = args.emotion_dimension
-        self.metrics = args.metrics
-
-        self.save_plot = args.save_plot
-
-        self.device = self.init_device()
-
-    def load_config(self):
-        from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
-        return config
+        self.teacher_model_name = args.teacher_model_name
+        self.teacher_modality = args.teacher_modality
+        self.student_model_name = args.student_model_name
+        self.student_modality = args.student_modality
+        self.knowledges = args.knowledges
 
     def create_model(self):
 
+        from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.configs import config_knowledge_distillation as model_configs
         output_dim = 1
-        if "eeg_image" in self.modality:
-            backbone_state_dict = self.backbone_state_dict_eeg
-        elif "frame" in self.modality:
-            backbone_state_dict = self.backbone_state_dict_frame
-        else:
-            raise ValueError("Unsupported modality!")
+
+
+
 
         if "2d1d" in self.model_name:
             model = my_2d1d(backbone_state_dict=backbone_state_dict, backbone_mode=self.backbone_mode,
                             embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
                             modality=self.modality, output_dim=output_dim, kernel_size=self.cnn1d_kernel_size,
-                            dropout=self.cnn1d_dropout, root_dir=self.model_load_path)
+                            dropout=self.cnn1d_dropout, root_dir=self.model_load_path, role="student")
         elif "2dlstm" in self.model_name:
             model = my_2dlstm(backbone_state_dict=backbone_state_dict, backbone_mode=self.backbone_mode,
                               embedding_dim=self.lstm_embedding_dim, hidden_dim=self.lstm_hidden_dim,
-                              modality=self.modality,
-                              output_dim=output_dim, dropout=self.lstm_dropout,
-                              root_dir=self.model_load_path)
+                              modality=self.modality, output_dim=output_dim, dropout=self.lstm_dropout,
+                              root_dir=self.model_load_path, role="student")
         else:
             raise ValueError("Unsupported model!")
         return model
@@ -160,10 +111,10 @@ class Experiment(GenericExperiment):
             dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
 
             trainer = MAHNOBRegressionTrainer(model, stamp=self.stamp, model_name=self.model_name,
-                                              learning_rate=self.learning_rate, min_learning_rate=self.min_learning_rate, metrics=self.metrics,
+                                              learning_rate=self.learning_rate, metrics=self.metrics,
                                               save_path=fold_save_path, early_stopping=self.early_stopping,
                                               patience=self.patience, factor=self.factor, load_best_at_each_epoch=self.load_best_at_each_epoch,
-                                              milestone=self.milestone, criterion=criterion, verbose=True, save_plot=self.save_plot,
+                                              milestone=self.milestone, criterion=criterion, verbose=True,
                                               device=self.device)
 
             parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,

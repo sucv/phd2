@@ -229,7 +229,7 @@ class AVEC2019Dataset(Dataset):
         return frames, continuous_labels, indices, session
 
     def get_3D_transforms(self):
-        normalize = transforms3D.GroupNormalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        normalize = transforms3D.GroupNormalize([0.5077, 0.5077, 0.5077], [0.2544, 0.2544, 0.2544])
 
         if self.mode == 'train':
             self.transforms = transforms.Compose([
