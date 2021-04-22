@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v", help='The filename for the backbone state dict.')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
-    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
+    parser.add_argument('-cnn1d_channels', default=[128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
     parser.add_argument('-cnn1d_kernel_size', default=5, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 
