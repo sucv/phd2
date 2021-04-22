@@ -54,9 +54,9 @@ cd "$PBS_O_WORKDIR" || exit $?
 ### are provided below.
 
 singularity run --nv --bind ~/scratch/dataset:/media/ \
-        ~/scratch/pth_er.sif python ~/phd2/project/emotion_regression_on_mahnob_hci/main.py \
-        -folds_to_run $fr -stamp $s  -resume $r -high_performance_cluster 1 \
+        ~/scratch/pth_er.sif python ~/phd2/project/emotion_analysis_on_mahnob_hci/regression/main.py \
+        -folds_to_run $fr -resume $r -high_performance_cluster 1 \
         -model_load_path "/scratch/users/ntu/su012/pretrained_model" \
-        -model_save_path "/scratch/users/ntu/su012/trained_model" \
+        -model_save_path "/scratch/users/ntu/su012/trained_model" -dataset_load_path "/scratch/users/ntu/su012/dataset/mahnob" \
         -python_package_path "/home/users/ntu/su012/phd2" \
         > main_log
