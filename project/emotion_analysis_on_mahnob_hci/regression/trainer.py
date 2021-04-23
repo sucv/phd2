@@ -140,7 +140,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                     print("\nEarly Stop!\n")
                 break
 
-            if parameter_controller.get_current_lr() < self.min_learning_rate:
+            if epoch in self.milestone or parameter_controller.get_current_lr() < self.min_learning_rate:
 
                 parameter_controller.release_param()
                 self.model.load_state_dict(self.best_epoch_info['model_weights'])
@@ -277,7 +277,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             running_loss += loss.mean().item()
 
             if train_mode:
-                loss.backward(loss_weights, retain_graph=True)
+                loss.backward()
                 self.optimizer.step()
 
             #  print_progress(batch_index, len(data_loader))

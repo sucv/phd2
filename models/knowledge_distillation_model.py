@@ -9,7 +9,7 @@ from torch.nn import Linear, BatchNorm1d, BatchNorm2d, Dropout, Sequential, Modu
 
 class kd_2d1d(my_2d1d):
     def __init__(self, backbone_state_dict='', backbone_mode="ir", modality=['frame'], embedding_dim=512, channels=None,
-                 output_dim=1, kernel_size=5, dropout=0.1, root_dir='', folder='2d1d', knowledge=[], role='student'):
+                 output_dim=1, kernel_size=5, dropout=0.1, num_logits=192, root_dir='', folder='2d1d', knowledge=[], role='student'):
         super().__init__(backbone_state_dict=backbone_state_dict, backbone_mode=backbone_mode, modality=modality, embedding_dim=embedding_dim, channels=channels,
                  output_dim=output_dim, kernel_size=kernel_size, dropout=dropout, root_dir=root_dir)
 
@@ -19,6 +19,8 @@ class kd_2d1d(my_2d1d):
         self.folder = folder
         self.role = role
         self.knowledge = knowledge
+
+        self.fc = Linear(embedding_dim, num_logits)
 
     def init(self, fold=None):
         path = os.path.join(self.root_dir, self.folder, self.backbone_state_dict + ".pth")
@@ -38,9 +40,8 @@ class kd_2d1d(my_2d1d):
         if self.role == "student":
             state_dict = torch.load(path, map_location='cpu')
             spatial.load_state_dict(state_dict)
-
-        for param in spatial.parameters():
-            param.requires_grad = False
+            for param in spatial.parameters():
+                param.requires_grad = False
 
         self.model.spatial = spatial.backbone
         self.model.temporal = TemporalConvNet(
@@ -52,17 +53,20 @@ class kd_2d1d(my_2d1d):
             state_dict = torch.load(path, map_location='cpu')
             self.model.load_state_dict(state_dict)
 
+            for param in self.model.parameters():
+                param.requires_grad = False
+
     def forward(self, x):
         knowledges = {}
         num_batches, length, channel, width, height = x.shape
         x = x.view(-1, channel, width, height)
         x = self.model.spatial(x)
-        knowledges['logits'] = x.view(num_batches, length, -1)
+        knowledges['logits'] = self.fc(x)
         _, feature_dim = x.shape
         x = x.view(num_batches, length, feature_dim).transpose(1, 2).contiguous()
         x = self.model.temporal(x).transpose(1, 2).contiguous()
         x = x.contiguous().view(num_batches * length, -1)
-        knowledges['temporal_features'] = x.view(num_batches, length, -1)
+        knowledges['temporal'] = x
         x = self.model.regressor(x)
         x = x.view(num_batches, length, -1)
         return x, knowledges
@@ -80,7 +84,7 @@ if __name__ == '__main__':
     dropout = configs['2d1d']['cnn1d_dropout']
     model_load_path = "/home/zhangsu/phd2/load"
 
-    teacher = kd_2d1d(backbone_state_dict='test', backbone_mode=backbone_mode, modality=modality, embedding_dim=embedding_dim, channels=channels,
+    teacher = kd_2d1d(backbone_state_dict='mahnob_reg_v_0', backbone_mode=backbone_mode, modality=modality, embedding_dim=embedding_dim, channels=channels,
                       output_dim=1, kernel_size=kernel_size, dropout=dropout, root_dir=model_load_path, role="teacher")
     teacher.init(0)
     teacher.to(device)

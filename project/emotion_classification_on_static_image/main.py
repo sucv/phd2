@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance computing server or not?')
-    parser.add_argument('-stamp', default='pretrainResVIZ_bs16', type=str, help='To indicate different experiment instances') # pretrain_ResVIZ
+    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances') # pretrain_ResVIZ
 
     # Path for Python code, model, datasets
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/fer+/cross_entropy', type=str,
@@ -29,8 +29,8 @@ if __name__ == '__main__':
     # Training
     parser.add_argument('-resume', default=1, type=int, help='Resume from checkpoint?')
     parser.add_argument('-dataset', default="ferp_ce", help='Dataset: ckplus, oulu, fer2013, ferp, ferp_ce, rafd, rafdb, affectnet')
-    parser.add_argument('-model_name', default="my_res50_ir", help='The name to specify the model.')
-    parser.add_argument('-model_mode', default="ir", help='Mode: ir, ir_se')
+    parser.add_argument('-model_name', default="my_res50_ir_se", help='The name to specify the model.')
+    parser.add_argument('-model_mode', default="ir_se", help='Mode: ir, ir_se')
     parser.add_argument('-learning_rate', default=1e-3, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
     parser.add_argument('-num_epochs', default=7000, type=int, help='The total of epochs to run during training.')
