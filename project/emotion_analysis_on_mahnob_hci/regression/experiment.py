@@ -1,10 +1,10 @@
 from base.experiment import GenericExperiment
-from models.model import my_2d1d, my_2dlstm
+from models.model import my_2d1d, my_2dlstm, my_eeg1d, my_temporal, my_eeglstm
 from base.dataset import NFoldMahnobArranger, MAHNOBDataset
 from project.emotion_analysis_on_mahnob_hci.regression.checkpointer import Checkpointer
 from project.emotion_analysis_on_mahnob_hci.regression.trainer import MAHNOBRegressionTrainer
 from project.emotion_analysis_on_mahnob_hci.regression.parameter_control import ParamControl
-
+from base.utils import load_single_pkl
 from base.loss_function import CCCLoss
 
 import os
@@ -23,7 +23,7 @@ class Experiment(GenericExperiment):
         self.num_folds = args.num_folds
         self.folds_to_run = args.folds_to_run
         self.include_session_having_no_continuous_label = 0
-
+        self.normalize_eeg_raw = args.normalize_eeg_raw
         self.stamp = args.stamp
 
         self.modality = args.modality
@@ -40,8 +40,21 @@ class Experiment(GenericExperiment):
         self.lstm_hidden_dim = args.lstm_hidden_dim
         self.lstm_dropout = args.lstm_dropout
 
-        self.window_length = args.window_length
-        self.hop_size = args.hop_size
+        self.eegnet_num_channels = args.eegnet_num_channels
+        self.eegnet_num_samples = args.eegnet_num_samples
+        self.eegnet_dropout_rate = args.eegnet_dropout_rate
+        self.eegnet_kernel_length = args.eegnet_kernel_length
+        self.eegnet_kernel_length2 = args.eegnet_kernel_length2
+        self.eegnet_F1 = args.eegnet_F1
+        self.eegnet_F2 = args.eegnet_F2
+        self.eegnet_D = args.eegnet_D
+        self.eegnet_window_sec = args.eegnet_window_sec
+        self.eegnet_stride_sec = args.eegnet_stride_sec
+
+        self.psd_num_inputs = args.psd_num_inputs
+
+        self.window_sec = args.window_sec
+        self.hop_size_sec = args.hop_size_sec
         self.continuous_label_frequency = args.continuous_label_frequency
         self.frame_size = args.frame_size
         self.crop_size = args.crop_size
@@ -77,10 +90,10 @@ class Experiment(GenericExperiment):
         output_dim = 1
         if "eeg_image" in self.modality:
             backbone_state_dict = self.backbone_state_dict_eeg
-        elif "frame" in self.modality:
+
+        if "frame" in self.modality:
             backbone_state_dict = self.backbone_state_dict_frame
-        else:
-            raise ValueError("Unsupported modality!")
+
 
         if "2d1d" in self.model_name:
             model = my_2d1d(backbone_state_dict=backbone_state_dict, backbone_mode=self.backbone_mode,
@@ -93,6 +106,18 @@ class Experiment(GenericExperiment):
                               modality=self.modality,
                               output_dim=output_dim, dropout=self.lstm_dropout,
                               root_dir=self.model_load_path)
+        elif "eegnet1d" in self.model_name:
+            model = my_eeg1d(num_channels=self.eegnet_num_channels, num_samples=self.eegnet_num_samples, dropout_rate=self.eegnet_dropout_rate,
+                             kernel_length=self.eegnet_kernel_length, kernel_length2=self.eegnet_kernel_length2, F1=self.eegnet_F1, F2=self.eegnet_F2,
+                             D=self.eegnet_D, cnn1d_channels=self.cnn1d_channels, cnn1d_kernel_size=self.cnn1d_kernel_size, cnn1d_dropout_rate=self.cnn1d_dropout,
+                             output_dim=output_dim)
+        elif "eegnetlstm" in self.model_name:
+            model = my_eeglstm(num_channels=self.eegnet_num_channels, num_samples=self.eegnet_num_samples, dropout_rate=self.eegnet_dropout_rate,
+                               kernel_length=self.eegnet_kernel_length, kernel_length2=self.eegnet_kernel_length2, F1=self.eegnet_F1, F2=self.eegnet_F2,
+                               D=self.eegnet_D, embedding_dim=self.lstm_embedding_dim, hidden_dim=self.lstm_hidden_dim, lstm_dropout_rate=self.lstm_dropout)
+        elif "1d_only" in self.model_name or "lstm_only" in self.model_name:
+            model = my_temporal(model_name=self.model_name, num_inputs=self.psd_num_inputs, cnn1d_channels=self.cnn1d_channels, cnn1d_kernel_size=self.cnn1d_kernel_size,
+                                cnn1d_dropout_rate=self.cnn1d_dropout, embedding_dim=self.lstm_embedding_dim, hidden_dim=self.lstm_hidden_dim, lstm_dropout_rate=self.lstm_dropout, output_dim=output_dim)
         else:
             raise ValueError("Unsupported model!")
         return model
@@ -120,26 +145,28 @@ class Experiment(GenericExperiment):
 
         fold_index = np.roll(np.arange(self.num_folds), fold)
         subject_id_of_all_folds = list(itemgetter(*fold_index)(subject_id_of_all_folds))
-
-        data_dict = fold_arranger.make_data_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
+        print(subject_id_of_all_folds)
+        data_dict, normalize_dict = fold_arranger.make_data_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
         length_dict = fold_arranger.make_length_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
 
         dataloaders_dict = {}
         for partition in partition_dictionary.keys():
-            dataset = MAHNOBDataset(self.config, data_dict[partition], modality=self.modality,
-                                    emotion_dimension=self.emotion_dimension,
+            dataset = MAHNOBDataset(self.config, data_dict[partition], normalize_dict=normalize_dict, modality=self.modality,
+                                    continuous_label_frequency=self.config['frequency_dict']['continuous_label'], normalize_eeg_raw=self.normalize_eeg_raw,
+                                    emotion_dimension=self.emotion_dimension, eegnet_window_sec=self.eegnet_window_sec,
+                                    eegnet_stride_sec=self.eegnet_stride_sec,
                                     time_delay=self.time_delay, class_labels=class_labels, mode=partition)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
                 dataset=dataset, batch_size=self.batch_size, shuffle=True if partition == "train" else False)
 
-        return dataloaders_dict, length_dict
+        return dataloaders_dict, length_dict, normalize_dict
 
     def experiment(self):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
 
-        fold_arranger = NFoldMahnobArranger(dataset_load_path=self.dataset_load_path,
-                                            dataset_folder=self.dataset_folder,
+        fold_arranger = NFoldMahnobArranger(dataset_load_path=self.dataset_load_path, normalize_eeg_raw=self.normalize_eeg_raw,
+                                            dataset_folder=self.dataset_folder, window_sec=self.window_sec, hop_size_sec=self.hop_size_sec,
                                             include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
                                             modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
@@ -156,8 +183,10 @@ class Experiment(GenericExperiment):
             os.makedirs(fold_save_path, exist_ok=True)
             checkpoint_filename = os.path.join(fold_save_path, "checkpoint.pkl")
 
-            model.init(fold)
-            dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
+            if "2d1d" in self.model_name or "2dlstm" in self.model_name:
+                model.init(fold)
+
+            dataloaders_dict, lengths_dict, normalize_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
 
             trainer = MAHNOBRegressionTrainer(model, stamp=self.stamp, model_name=self.model_name,
                                               learning_rate=self.learning_rate, min_learning_rate=self.min_learning_rate, metrics=self.metrics,

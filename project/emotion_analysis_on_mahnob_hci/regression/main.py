@@ -10,13 +10,13 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='psd_best', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['eeg_image'], nargs="*", help='frame, eeg_image')
+    parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[3], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
@@ -27,23 +27,37 @@ if __name__ == '__main__':
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str, help='The path to the entire repository.')
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
+    parser.add_argument('-normalize_eeg_raw', default=0, type=int, help='Whether to normalize eeg raw data?')
     # Models
-    parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm')
+    parser.add_argument('-model_name', default="lstm_only", help='Model: 2d1d, 2dlstm, eegnet1d, eegnetlstm, 1d_only, lstm_only')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v", help='The filename for the backbone state dict.')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
     parser.add_argument('-cnn1d_channels', default=[128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
-    parser.add_argument('-cnn1d_kernel_size', default=5, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
+    parser.add_argument('-cnn1d_kernel_size', default=3, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 
-    parser.add_argument('-lstm_embedding_dim', default=512, type=int, help='Dimensions for LSTM feature vectors.')
-    parser.add_argument('-lstm_hidden_dim', default=256, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
+    parser.add_argument('-lstm_embedding_dim', default=192, type=int, help='Dimensions for LSTM feature vectors.')
+    parser.add_argument('-lstm_hidden_dim', default=128, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-lstm_dropout', default=0.4, type=float, help='The dropout rate.')
 
+    parser.add_argument('-eegnet_window_sec', default=2, type=int, help='seconds for each sample of eegnet.')
+    parser.add_argument('-eegnet_stride_sec', default=0.25, type=float, help='stepsize for each sampling window of eegnet.')
+    parser.add_argument('-eegnet_num_channels', default=32, type=int, help='number of electrodes')
+    parser.add_argument('-eegnet_num_samples', default=512, type=int, help='seconds x sampling frequency')
+    parser.add_argument('-eegnet_dropout_rate', default=0.25, type=int, help='Dropout rate for eegnet.')
+    parser.add_argument('-eegnet_kernel_length', default=128, type=int, help='1dcnn kernel length for block1.')
+    parser.add_argument('-eegnet_kernel_length2', default=64, type=int, help='1dcnn kernel length for block2.')
+    parser.add_argument('-eegnet_F1', default=8, type=int, help='Number of spatial filters.')
+    parser.add_argument('-eegnet_F2', default=16, type=int, help='Number of temporal filters.')
+    parser.add_argument('-eegnet_D', default=2, type=int, help='The number of spatial filters for each temporal filter.')
+
+    parser.add_argument('-psd_num_inputs', default=192, type=int, help='electrodes x interest bands')
+
     parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
-    parser.add_argument('-min_learning_rate', default=1e-6, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=5, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-min_learning_rate', default=1e-5, type=float, help='The minimum learning rate.')
+    parser.add_argument('-num_epochs', default=50, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-min_num_epochs', default=0, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
     parser.add_argument('-early_stopping', default=20, type=int, help='If no improvement, the number of epoch to run before halting the training')
@@ -54,8 +68,8 @@ if __name__ == '__main__':
     parser.add_argument('-metrics', default=["rmse", "pcc", "ccc"], nargs="*", help='The evaluation metrics.')
 
     # Dataloader settings
-    parser.add_argument('-window_length', default=24, type=int, help='The length in second to windowing the data.')
-    parser.add_argument('-hop_size', default=8, type=int, help='The step size or stride to move the window.')
+    parser.add_argument('-window_sec', default=24, type=int, help='The length in second to windowing the data.')
+    parser.add_argument('-hop_size_sec', default=8, type=int, help='The step size or stride to move the window.')
     parser.add_argument('-continuous_label_frequency', default=4, type=int,
                         help='The frequency of the continuous label.')
     parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
@@ -65,7 +79,7 @@ if __name__ == '__main__':
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
-    parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
+    parser.add_argument('-gradual_release', default=0, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=3, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
     parser.add_argument('-load_best_at_each_epoch', default=1, type=int, help='Whether to load the best model state at the end of each epoch?')

@@ -18,6 +18,8 @@ class Trainer(ClassificationTrainer):
         mode = 'max'
         if isinstance(self.criterion, CrossEntropyLoss):
             mode = 'min'
+        elif isinstance(self.criterion, CrossEntropyLoss):
+            mode = 'min'
 
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode, patience=self.patience,
                                                                     factor=self.factor)

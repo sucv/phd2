@@ -259,6 +259,12 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             if 'eeg_image' in X:
                 inputs = X['eeg_image'].to(self.device)
 
+            if 'eeg_raw' in X:
+                inputs = X['eeg_raw'].to(self.device)
+
+            if 'eeg_psd' in X:
+                inputs = X['eeg_psd'].to(self.device)
+
             labels = torch.squeeze(Y.float().to(self.device), dim=2)
 
             # Determine the weight for loss function

@@ -60,7 +60,7 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
     A class to prepare files according to the n-fold manner.
     """
 
-    def __init__(self, dataset_load_path, dataset_folder, modality, window_length=24, hop_size=8, continuous_label_frequency=4, include_session_having_no_continuous_label=True):
+    def __init__(self, dataset_load_path, dataset_folder, modality, normalize_eeg_raw=True, num_electrodes=32, window_sec=24, hop_size_sec=8, continuous_label_frequency=4, include_session_having_no_continuous_label=True, feature_extraction=False):
 
         # The root directory of the dataset.
         super().__init__(dataset_load_path=dataset_load_path, dataset_folder=dataset_folder)
@@ -68,11 +68,14 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         # Load the dataset information
         self.dataset_info = self.get_dataset_info()
 
+        self.num_electrodes = num_electrodes
+        self.normalize_eeg_raw = normalize_eeg_raw
+
         # Regression or Classification?
         self.include_session_having_no_continuous_label = include_session_having_no_continuous_label
 
-        self.depth = window_length * continuous_label_frequency
-        self.step_size = hop_size * continuous_label_frequency
+        self.depth = window_sec * continuous_label_frequency
+        self.step_size = hop_size_sec * continuous_label_frequency
 
         # Frame, EEG, which one or both?
         self.modality = modality
@@ -80,6 +83,7 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
         # Get the sessions having continuous labels.
         self.sessions_having_continuous_label = self.get_session_indices_having_continuous_label()
+        self.feature_extraction = feature_extraction
 
     def get_modality_list(self):
 
@@ -106,7 +110,17 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         # Initialize the dictionary to be outputed.
         data_dict = {key: [] for key in subject_id_of_all_partitions}
 
+
+        normalize_dict = {key: {} for key in subject_id_of_all_partitions}
+
         for partition, subject_id_of_a_partition in subject_id_of_all_partitions.items():
+
+            if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                trial_wise_eeg_mean_cache = np.zeros((self.num_electrodes,))
+                trial_wise_eeg_std_cache = np.zeros((self.num_electrodes,))
+                num_samples = 0
+                eeg_raw_path_list = []
+
             for subject_id_of_a_fold in subject_id_of_a_partition:
 
                 data_of_a_modal = []
@@ -138,6 +152,12 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
                                 length = length_list
                                 trial_directory = directory_list
 
+                            if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                                eeg_raw_path = os.path.join(trial_directory, "eeg_raw.npy")
+                                intermediate = np.load(eeg_raw_path)
+                                num_samples += intermediate.shape[0]
+                                trial_wise_eeg_mean_cache += np.sum(intermediate, axis=0)
+                                eeg_raw_path_list.append(eeg_raw_path)
                             num_windows = int(np.ceil((length - self.depth) / self.step_size)) + 1
 
                             for window in range(num_windows):
@@ -163,7 +183,17 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
                     data_dict[partition].extend(data_of_a_modal)
 
-        return data_dict
+            if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                eeg_raw_mean = trial_wise_eeg_mean_cache / num_samples
+
+                for eeg_raw_path in eeg_raw_path_list:
+                    trial_wise_eeg_std_cache += np.sum(np.square(np.load(eeg_raw_path) - eeg_raw_mean), axis=0)
+
+                eeg_raw_std = np.sqrt(trial_wise_eeg_std_cache / num_samples)
+                normalize_dict[partition]['mean'] = eeg_raw_mean
+                normalize_dict[partition]['std'] = eeg_raw_std
+
+        return data_dict, normalize_dict
 
     def make_length_dict(self, subject_id_of_all_folds, partition_dictionary):
 
@@ -305,17 +335,26 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
 
 class MAHNOBDataset(Dataset):
-    def __init__(self, config, data_list, modality, emotion_dimension, frame_size=48, crop_size=40, time_delay=0, class_labels=None, mode='train'):
+    def __init__(self, config, data_list, normalize_dict, modality, emotion_dimension, continuous_label_frequency=4,
+                 eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=1,
+                 window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train'):
         self.frame_size = frame_size
         self.crop_size = crop_size
         self.mode = mode
         self.data_list = data_list
+        self.normalize_dict = normalize_dict
+        self.normalize_eeg_raw = normalize_eeg_raw
         self.ratio = config['downsampling_interval_dict']
         self.modality = modality
         self.emotion_dimension = emotion_dimension
         self.time_delay = np.int(time_delay * 4)
         self.get_3D_transforms()
         self.class_label = class_labels
+        self.continuous_label_frequency = continuous_label_frequency
+        self.eegnet_window_sec = eegnet_window_sec
+        self.eeg_window_length = int(eegnet_window_sec * config['frequency_dict']['eeg_raw'])
+        self.stride = int(eegnet_stride_sec * config['frequency_dict']['eeg_raw'])
+        self.num_eegnet_windows = window_sec * config['frequency_dict']['continuous_label']
 
     def get_3D_transforms(self):
         normalize = transforms3D.GroupNormalize([0.5077, 0.5077, 0.5077], [0.2544, 0.2544, 0.2544])
@@ -337,6 +376,14 @@ class MAHNOBDataset(Dataset):
                 normalize_eeg_image
             ])
 
+            eeg_raw_transforms = []
+            if self.normalize_eeg_raw:
+                eeg_raw_transforms.append(transforms3D.GroupEegRawDataNormalize(
+                    mean=self.normalize_dict[self.mode]['mean'], std=self.normalize_dict[self.mode]['std']))
+            eeg_raw_transforms.append(transforms3D.GroupEegRawToTensor())
+
+            self.eeg_raw_transforms = transforms.Compose(eeg_raw_transforms)
+
         else:
             self.image_transforms = transforms.Compose([
                 transforms3D.GroupNumpyToPILImage(0),
@@ -351,11 +398,21 @@ class MAHNOBDataset(Dataset):
                 normalize_eeg_image
             ])
 
+            self.eeg_raw_transforms = transforms.Compose([
+                transforms3D.GroupEegRawToTensor()
+            ])
+
     def get_frame_indices(self, indices):
         x = 0
         if self.mode == 'train':
             x = random.randint(0, self.ratio['frame'] - 1)
         indices = indices * self.ratio['frame'] + x
+        return indices
+
+    def get_eeg_indices(self, indices):
+        start = indices[0] * self.ratio['eeg_raw']
+        end = (indices[-1] + 1 + self.continuous_label_frequency * self.eegnet_window_sec) * self.ratio['eeg_raw']
+        indices = np.arange(start, end)
         return indices
 
     def __len__(self):
@@ -367,13 +424,25 @@ class MAHNOBDataset(Dataset):
         frames = np.load(filename, mmap_mode='c')[indices]
         return frames
 
-    def __getitem__(self, index):
+    def resample_eeg_raw(self, eeg_raw):
+        eeg_raw_matrix = np.zeros((self.num_eegnet_windows, 1, 32, self.eeg_window_length))
+        start = 0
+        end = self.eeg_window_length
+        for i in range(self.num_eegnet_windows):
+            eeg_raw_matrix[i] = eeg_raw[:, start:end]
+            start += self.stride
+            end = start + self.eeg_window_length
+        return eeg_raw_matrix
 
+    def __getitem__(self, index):
         directory = self.data_list[index][0]
         absolute_indices = self.data_list[index][1]
         relative_indices = self.data_list[index][2]
+
         session = self.data_list[index][3]
         new_indices = self.get_frame_indices(relative_indices)
+
+        eeg_indices = self.get_eeg_indices(relative_indices)
 
         features = {}
 
@@ -386,6 +455,18 @@ class MAHNOBDataset(Dataset):
             eeg_images = self.load_data(directory, relative_indices, "eeg_image.npy")
             eeg_images = self.eeg_transforms(eeg_images)
             features.update({'eeg_image': eeg_images})
+
+        if "eeg_raw" in self.modality:
+            eeg_raws = self.load_data(directory, eeg_indices, "eeg_raw.npy").transpose()
+            eeg_raws = self.resample_eeg_raw(eeg_raws)
+            eeg_raws = np.asarray(eeg_raws, dtype=np.float32)
+            eeg_raws = self.eeg_raw_transforms(eeg_raws)
+            features.update({'eeg_raw': eeg_raws})
+
+        if "eeg_psd" in self.modality:
+            eeg_psds = self.load_data(directory, relative_indices, "eeg_psd.npy").transpose()
+            eeg_psds = np.asarray(eeg_psds, dtype=np.float32)
+            features.update({'eeg_raw': eeg_psds})
 
         if self.class_label is None:
             # Regression on Valence

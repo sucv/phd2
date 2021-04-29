@@ -7,6 +7,25 @@ import numbers
 import torch
 from sklearn.decomposition import PCA
 
+
+class GroupEegRawDataNormalize(object):
+    def __init__(self, mean, std):
+        self.mean = mean[:, np.newaxis]
+        self.std = std[:, np.newaxis]
+
+    def __call__(self, eeg_raw):
+
+        for k in range(eeg_raw.shape[0]):
+            eeg_raw[k, 0, :, :] =  (eeg_raw[k, 0, :, :] - self.mean) / self.std
+
+        return eeg_raw
+
+
+class GroupEegRawToTensor(object):
+    def __call__(self, eeg_raw):
+        eeg_raw = torch.from_numpy(eeg_raw)
+        return eeg_raw
+
 class GroupNumpyToPILImage(object):
     def __init__(self, use_inverse):
         self.use_inverse = use_inverse

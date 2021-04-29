@@ -11,6 +11,11 @@ config_knowledge_distillation = {
         "teacher_eeg_image_model_state_folder": "trained_2d1d_eeg_image",
         "student_eeg_image_backbone_state_folder": "backbone_eeg_image"
     },
+    "resnet": {
+        "model_name": "resnet",
+        "backbone_mode": "ir",
+        "student_eeg_image_backbone_state_folder": "backbone_eeg_image"
+    },
     "lstm": {
         "model_name": "2dlstm",
         "backbone_mode": "ir",

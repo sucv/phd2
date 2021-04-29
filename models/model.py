@@ -1,6 +1,6 @@
 from models.arcface_model import Backbone, Backbone_Eeg
 from models.temporal_convolutional_model import TemporalConvNet
-
+from models.eeg_net import EEGNet
 import os
 import torch
 from torch import nn
@@ -82,6 +82,91 @@ class my_res50_tempool(nn.Module):
         return x
 
 
+class my_temporal(nn.Module):
+    def __init__(self, model_name, num_inputs=192, cnn1d_channels=[128, 128, 128], cnn1d_kernel_size=5, cnn1d_dropout_rate=0.1,
+                 embedding_dim=256, hidden_dim=128, lstm_dropout_rate=0.5, output_dim=1):
+        super().__init__()
+        self.model_name = model_name
+        if "1d" in model_name:
+            self.temporal = TemporalConvNet(num_inputs=num_inputs, num_channels=cnn1d_channels,
+                                       kernel_size=cnn1d_kernel_size, dropout=cnn1d_dropout_rate)
+            self.regressor = nn.Linear(cnn1d_channels[-1], output_dim)
+
+        elif "lstm" in model_name:
+            self.temporal = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, num_layers=2,
+                                batch_first=True, bidirectional=True, dropout=lstm_dropout_rate)
+            self.regressor = nn.Linear(hidden_dim * 2, output_dim)
+
+
+    def forward(self, x):
+        if "lstm_only" in self.model_name:
+            x = x.transpose(1, 2).contiguous()
+            x, _ = self.temporal(x)
+            x = x.contiguous()
+        else:
+            x = self.temporal(x).transpose(1, 2).contiguous()
+        batch, time_step, temporal_feature_dim = x.shape
+        x = x.view(-1, temporal_feature_dim)
+        x = self.regressor(x)
+        x = x.view(batch, time_step, 1)
+        return x
+
+class my_eeglstm(nn.Module):
+    def __init__(self, num_channels=60, num_samples=151, dropout_rate=0.5, kernel_length=64, kernel_length2=16, F1=8,
+                 D=2, F2=16, embedding_dim=256, hidden_dim=128, output_dim=1, lstm_dropout_rate=0.5):
+        super().__init__()
+        num_inputs = num_samples // 32 * F2
+        self.spatial = EEGNet(num_channels=num_channels, num_samples=num_samples, dropout_rate=dropout_rate,
+                              kernel_length=kernel_length, kernel_length2=kernel_length2, F1=F1, F2=F2, D=D).blocks
+
+        self.temporal = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, num_layers=2,
+                                batch_first=True, bidirectional=True, dropout=lstm_dropout_rate)
+
+        self.regressor = nn.Linear(hidden_dim * 2, output_dim)
+
+    def forward(self, x):
+        batch, time_step, _, electrode, sample = x.shape
+        x = x.view(-1, 1, electrode, sample)
+        x = self.spatial(x)
+        x = x.view(batch, time_step, -1)
+
+        x, _ = self.temporal(x)
+        x = x.contiguous()
+        _, _, temporal_feature_dim = x.shape
+        x = x.view(-1, temporal_feature_dim)
+        x = self.regressor(x)
+        x = x.view(batch, time_step, 1)
+        return x
+
+class my_eeg1d(nn.Module):
+    def __init__(self, num_channels=60, num_samples=151,
+                 dropout_rate=0.5, kernel_length=64, kernel_length2=16, F1=8, D=2, F2=16,
+                 cnn1d_channels=[128, 128, 128], cnn1d_kernel_size=5, cnn1d_dropout_rate=0.1, output_dim=1):
+        super().__init__()
+
+        num_inputs = num_samples // 32 * F2
+        self.spatial = EEGNet(num_channels=num_channels, num_samples=num_samples, dropout_rate=dropout_rate,
+                         kernel_length=kernel_length, kernel_length2=kernel_length2, F1=F1, F2=F2, D=D).blocks
+
+        self.temporal = TemporalConvNet(num_inputs=num_inputs, num_channels=cnn1d_channels,
+                                   kernel_size=cnn1d_kernel_size, dropout=cnn1d_dropout_rate)
+
+        self.regressor = nn.Linear(cnn1d_channels[-1], output_dim)
+
+    def forward(self, x):
+        batch, time_step, _, electrode, sample = x.shape
+        x = x.view(-1, 1, electrode, sample)
+        x = self.spatial(x)
+        x = x.view(batch, time_step, -1).transpose(2, 1).contiguous()
+
+        x = self.temporal(x).transpose(1, 2).contiguous()
+        _, _, temporal_feature_dim = x.shape
+        x = x.view(-1, temporal_feature_dim)
+        x = self.regressor(x)
+        x = x.view(batch, time_step, 1)
+        return x
+
+
 class my_2d1d(nn.Module):
     def __init__(self, backbone_state_dict, backbone_mode="ir", modality=['frame'], embedding_dim=512, channels=None,
                  output_dim=1, kernel_size=5, dropout=0.1, root_dir=''):
@@ -97,7 +182,6 @@ class my_2d1d(nn.Module):
         self.output_dim = output_dim
         self.kernel_size = kernel_size
         self.dropout = dropout
-
 
     def init(self, fold=None):
         path = os.path.join(self.root_dir, self.backbone_state_dict + ".pth")

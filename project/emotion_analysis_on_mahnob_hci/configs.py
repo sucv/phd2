@@ -10,10 +10,17 @@ config_mahnob = {
     "openface_output_folder": "processed_{:d}".format(frame_size),
     "npy_folder": "compacted_{:d}".format(frame_size),
     "emotion_dimension": ["Valence"],
+    "eeg_feature_extraction": True,
+    "eeg_feature_list": ["psd"],
     "downsampling_interval_dict": {
         "frame": 16,
-        "eeg": 64,
+        "eeg_raw": 64,
         "continuous_label": 1
+    },
+    "frequency_dict":{
+        "frame": 64,
+        "eeg_raw": 256,
+        "continuous_label": 4
     },
     "frame_size": frame_size,
     "crop_size": crop_size,

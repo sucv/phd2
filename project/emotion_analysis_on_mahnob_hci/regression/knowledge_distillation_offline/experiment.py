@@ -1,13 +1,13 @@
 from base.experiment import GenericExperiment
 from models.model import my_2d1d, my_2dlstm
-from models.knowledge_distillation_model import kd_2d1d
+from models.knowledge_distillation_model import kd_2d1d, kd_res50
 from base.dataset import NFoldMahnobArranger, MAHNOBDataset
 from project.emotion_analysis_on_mahnob_hci.regression.checkpointer import Checkpointer
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.trainer import \
     MAHNOBRegressionKnowledgeDistillationTrainer
-from project.emotion_analysis_on_mahnob_hci.regression.parameter_control import ParamControl
+from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import ParamControl
 
-from base.loss_function import CCCLoss, SoftTarget, CC
+from base.loss_function import CCCLoss, SoftTarget, CC, Hint
 
 import os
 from operator import itemgetter
@@ -48,37 +48,13 @@ class KnowledgeDistillationRegressionExperiment(GenericExperiment):
         self.continuous_label_frequency = args.continuous_label_frequency
         self.frame_size = args.frame_size
         self.crop_size = args.crop_size
-        self.batch_size = args.batch_size
-
-        self.milestone = args.milestone
-        self.learning_rate = args.learning_rate
-        self.min_learning_rate = args.min_learning_rate
-        self.early_stopping = args.early_stopping
-        self.patience = args.patience
-        self.time_delay = args.time_delay
-        self.num_epochs = args.num_epochs
-        self.min_num_epochs = args.min_num_epochs
-        self.factor = args.factor
-        self.gradual_release = args.gradual_release
-        self.release_count = args.release_count
-        self.load_best_at_each_epoch = args.load_best_at_each_epoch
+        self.batch_size = 1
 
         self.num_classes = args.num_classes
         self.emotion_dimension = args.emotion_dimension
-        self.metrics = args.metrics
-
-        self.save_plot = args.save_plot
 
         self.device = self.init_device()
 
-        self.teacher_model_name = args.teacher_model_name
-        self.teacher_modality = args.teacher_modality
-        self.student_model_name = args.student_model_name
-        self.student_modality = args.student_modality
-        self.knowledges = args.knowledges
-
-        self.alpha = args.alpha
-        self.beta = args.beta
 
     def load_config(self):
         from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
@@ -97,12 +73,12 @@ class KnowledgeDistillationRegressionExperiment(GenericExperiment):
         teach_model_state_folder = self.config['kd_config']['2d1d']['teacher_frame_model_state_folder']
         student_backbone_state_folder = self.config['kd_config']['2d1d']['student_eeg_image_backbone_state_folder']
 
-        teacher = kd_2d1d(backbone_state_dict=self.backbone_state_dict_frame, backbone_mode=self.backbone_mode,
+        teacher = kd_res50(backbone_state_dict=self.backbone_state_dict_frame, backbone_mode=self.backbone_mode,
                           modality=['frame'], embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
                           output_dim=1, kernel_size=self.cnn1d_kernel_size, dropout=self.cnn1d_dropout,
                           root_dir=self.model_load_path, folder=teach_model_state_folder, role="teacher")
 
-        student = kd_2d1d(backbone_state_dict=self.backbone_state_dict_eeg, backbone_mode=self.backbone_mode,
+        student = kd_res50(backbone_state_dict=self.backbone_state_dict_eeg, backbone_mode=self.backbone_mode,
                           modality=['eeg_image'],
                           embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
                           output_dim=1, kernel_size=self.cnn1d_kernel_size, dropout=self.cnn1d_dropout,
@@ -159,7 +135,7 @@ class KnowledgeDistillationRegressionExperiment(GenericExperiment):
         print(subject_id_of_all_folds)
         model, teacher = self.create_model()
 
-        criterion = {'ccc': CCCLoss(), 'kd': SoftTarget(T=2), 'cc': CC(gamma=0.7, P_order=5)}
+        criterion = {'ccc': CCCLoss(), 'kd': SoftTarget(T=2), 'cc': CC(gamma=0.7, P_order=5), 'hint': Hint()}
 
         # Here goes the N-fold training.
         for fold in iter(self.folds_to_run):

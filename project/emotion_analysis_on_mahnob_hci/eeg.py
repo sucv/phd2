@@ -5,7 +5,7 @@ import numpy as np
 
 
 class EegMahnob(GenericEegController):
-    def __init__(self, filename, buffer=2, electrode_2d_pos=None, eeg_image_size=40):
+    def __init__(self, filename, buffer=2, electrode_2d_pos=None, eeg_image_size=40, eeg_feature_list=['raw_data']):
         self.filename = filename
         self.buffer = buffer
         self.frequency = 256
@@ -16,7 +16,8 @@ class EegMahnob(GenericEegController):
         self.interest_bands = self.set_interest_bands()
         self.channel_slice = self.get_channel_slice()
 
-        self.filtered_raw_eeg, self.eeg_images = self.preprocessing()
+        self.eeg_feature_list = eeg_feature_list
+        self.extracted_data = self.preprocessing()
 
     def calculate_psd(self, data):
         data_np = data[:][0]
@@ -40,11 +41,31 @@ class EegMahnob(GenericEegController):
         cropped_raw_data = self.crop_data(raw_data, crop_range)
         cropped_eeg_raw_data = self.get_eeg_data(cropped_raw_data)
         average_referenced_data = self.average_reference(cropped_eeg_raw_data)
-        filtered_data_np = self.filter_eeg_data(average_referenced_data)
-        power_spectram_densities = self.calculate_psd(average_referenced_data)
-        eeg_images = self.create_eeg_image(power_spectram_densities)
+        power_spectram_densities = None
 
-        return filtered_data_np, eeg_images
+        extracted_data = {}
+        if "raw_data" in self.eeg_feature_list:
+            filtered_data_np = self.filter_eeg_data(average_referenced_data)
+            extracted_data.update({'raw_data': filtered_data_np})
+
+        if "psd" in self.eeg_feature_list:
+            power_spectram_densities = self.calculate_psd(average_referenced_data)
+            psds_np = self.produce_psd_array(power_spectram_densities)
+            extracted_data.update({'psd': psds_np})
+
+        if "eeg_image" in self.eeg_feature_list:
+
+            if power_spectram_densities is None:
+                power_spectram_densities = self.calculate_psd(average_referenced_data)
+            eeg_images = self.create_eeg_image(power_spectram_densities)
+            extracted_data.update({'eeg_image': eeg_images})
+
+        return extracted_data
+
+    def produce_psd_array(self, power_spectram_densities):
+        num_psd_per_sample = len(self.interest_bands) * len(self.electrode_2d_pos)
+        psd_array = np.reshape(power_spectram_densities, (-1, num_psd_per_sample))
+        return psd_array
 
     def create_eeg_image(self, power_spectram_densities):
         power_spectram_densities = power_spectram_densities[np.newaxis, :]

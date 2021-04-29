@@ -39,6 +39,8 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
         self.eeg_electrode_3d_coordinates = self.get_eeg_electrode_3d_coordinates(self.eeg_electrode_list)
         self.eeg_electrode_2d_coordinates = self.get_eeg_electrode_2d_coordinates(self.eeg_electrode_3d_coordinates)
 
+        self.eeg_feature_extraction = self.config['eeg_feature_extraction']
+        self.eeg_feature_list = self.config['eeg_feature_list']
 
         # The total of the sessions of the dataset.
         self.session_number = self.count_session()
@@ -354,14 +356,28 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
                 output_directory = self.dataset_info['npy_output_folder'][index]
                 os.makedirs(output_directory, exist_ok=True)
                 output_eeg_raw_file = os.path.join(output_directory, "eeg_raw.npy")
+                output_eeg_psd_file = os.path.join(output_directory, "eeg_psd.npy")
                 output_eeg_image_file = os.path.join(output_directory, "eeg_image.npy")
 
-                if not os.path.isfile(output_eeg_image_file):
-                    eeg_handler = EegMahnob(eeg_bdf_list[pointer], buffer=5, electrode_2d_pos=self.eeg_electrode_2d_coordinates, eeg_image_size=self.config['crop_size'])
-                    eeg_data = eeg_handler.filtered_raw_eeg
-                    eeg_image = eeg_handler.eeg_images
-                    np.save(output_eeg_raw_file, eeg_data)
-                    np.save(output_eeg_image_file, eeg_image)
+                if self.eeg_feature_extraction:
+                    eeg_handler = EegMahnob(
+                        eeg_bdf_list[pointer], buffer=5, electrode_2d_pos=self.eeg_electrode_2d_coordinates,
+                        eeg_image_size=self.config['crop_size'], eeg_feature_list=self.eeg_feature_list)
+
+                    if "raw_data" in self.eeg_feature_list:
+                        eeg_data = eeg_handler.extracted_data['raw_data']
+                        if not os.path.isfile(output_eeg_raw_file):
+                            np.save(output_eeg_raw_file, eeg_data)
+
+                    if "psd" in self.eeg_feature_list:
+                        eeg_psd = eeg_handler.extracted_data['psd']
+                        if not os.path.isfile(output_eeg_psd_file):
+                            np.save(output_eeg_psd_file, eeg_psd)
+
+                    if "eeg_image" in self.eeg_feature_list:
+                        eeg_image = eeg_handler.extracted_data['eeg_image']
+                        if not os.path.isfile(output_eeg_image_file):
+                            np.save(output_eeg_image_file, eeg_image)
 
                 pointer += 1
 

@@ -103,3 +103,18 @@ class CC(nn.Module):
                         math.factorial(p) * torch.pow(sim_mat, p)
 
         return corr_mat
+
+
+class Hint(nn.Module):
+    """
+	FitNets: Hints for Thin Deep Nets
+	https://arxiv.org/pdf/1412.6550.pdf
+	"""
+
+    def __init__(self):
+        super(Hint, self).__init__()
+
+    def forward(self, fm_s, fm_t):
+        loss = F.mse_loss(fm_s, fm_t)
+
+        return loss
