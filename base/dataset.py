@@ -158,11 +158,17 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
                                 num_samples += intermediate.shape[0]
                                 trial_wise_eeg_mean_cache += np.sum(intermediate, axis=0)
                                 eeg_raw_path_list.append(eeg_raw_path)
-                            num_windows = int(np.ceil((length - self.depth) / self.step_size)) + 1
+
+                            if self.feature_extraction:
+                                depth = length
+                            else:
+                                depth = self.depth
+                            num_windows = int(np.ceil((length - depth) / self.step_size)) + 1
+
 
                             for window in range(num_windows):
                                 start = window * self.step_size
-                                end = start + self.depth
+                                end = start + depth
 
                                 if end > length:
                                     break
@@ -171,8 +177,8 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
                                 absolute_indices = relative_indices + initial_index_relative_to_this_subject
                                 data_of_a_modal.append([trial_directory, absolute_indices, relative_indices, session_name])
 
-                            if (length - self.depth) % self.step_size != 0:
-                                start = length - self.depth
+                            if (length - depth) % self.step_size != 0:
+                                start = length - depth
                                 end = length
                                 relative_indices = np.arange(start, end)
                                 absolute_indices = relative_indices + initial_index_relative_to_this_subject
@@ -335,9 +341,9 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
 
 class MAHNOBDataset(Dataset):
-    def __init__(self, config, data_list, normalize_dict, modality, emotion_dimension, continuous_label_frequency=4,
-                 eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=1,
-                 window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train'):
+    def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'], continuous_label_frequency=4,
+                 eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=0,
+                 window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train', feature_extraction=False):
         self.frame_size = frame_size
         self.crop_size = crop_size
         self.mode = mode
@@ -346,6 +352,7 @@ class MAHNOBDataset(Dataset):
         self.normalize_eeg_raw = normalize_eeg_raw
         self.ratio = config['downsampling_interval_dict']
         self.modality = modality
+        self.feature_extraction = feature_extraction
         self.emotion_dimension = emotion_dimension
         self.time_delay = np.int(time_delay * 4)
         self.get_3D_transforms()
@@ -361,53 +368,68 @@ class MAHNOBDataset(Dataset):
         normalize_eeg_image = transforms3D.GroupNormalize([0.5, 0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
 
         if self.mode == 'train':
-            self.image_transforms = transforms.Compose([
-                transforms3D.GroupNumpyToPILImage(0),
-                transforms3D.GroupRandomCrop(self.frame_size, self.crop_size),
-                transforms3D.GroupRandomHorizontalFlip(),
-                transforms3D.Stack(),
-                transforms3D.ToTorchFormatTensor(),
-                normalize
-            ])
+            if "frame" in self.modality:
+                self.image_transforms = transforms.Compose([
+                    transforms3D.GroupNumpyToPILImage(0),
+                    transforms3D.GroupRandomCrop(self.frame_size, self.crop_size),
+                    transforms3D.GroupRandomHorizontalFlip(),
+                    transforms3D.Stack(),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize
+                ])
 
-            self.eeg_transforms = transforms.Compose([
-                transforms3D.GroupWhiteNoiseByPCA(std_multiplier=0.1, num_components=2),
-                transforms3D.ToTorchFormatTensor(),
-                normalize_eeg_image
-            ])
+            if "eeg_image" in self.modality:
+                self.eeg_transforms = transforms.Compose([
+                    transforms3D.GroupWhiteNoiseByPCA(std_multiplier=0.1, num_components=2),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize_eeg_image
+                ])
 
-            eeg_raw_transforms = []
-            if self.normalize_eeg_raw:
-                eeg_raw_transforms.append(transforms3D.GroupEegRawDataNormalize(
-                    mean=self.normalize_dict[self.mode]['mean'], std=self.normalize_dict[self.mode]['std']))
-            eeg_raw_transforms.append(transforms3D.GroupEegRawToTensor())
+            if "eeg_raw" in self.modality:
+                eeg_raw_transforms = []
+                if self.normalize_eeg_raw:
+                    eeg_raw_transforms.append(transforms3D.GroupEegRawDataNormalize(
+                        mean=self.normalize_dict[self.mode]['mean'], std=self.normalize_dict[self.mode]['std']))
+                eeg_raw_transforms.append(transforms3D.GroupEegRawToTensor())
 
-            self.eeg_raw_transforms = transforms.Compose(eeg_raw_transforms)
+                self.eeg_raw_transforms = transforms.Compose(eeg_raw_transforms)
 
         else:
-            self.image_transforms = transforms.Compose([
-                transforms3D.GroupNumpyToPILImage(0),
-                transforms3D.GroupCenterCrop(self.crop_size),
-                transforms3D.Stack(),
-                transforms3D.ToTorchFormatTensor(),
-                normalize
-            ])
+            if "frame" in self.modality:
+                self.image_transforms = transforms.Compose([
+                    transforms3D.GroupNumpyToPILImage(0),
+                    transforms3D.GroupCenterCrop(self.crop_size),
+                    transforms3D.Stack(),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize
+                ])
 
-            self.eeg_transforms = transforms.Compose([
-                transforms3D.ToTorchFormatTensor(),
-                normalize_eeg_image
-            ])
+            if "eeg_image" in self.modality:
+                self.eeg_transforms = transforms.Compose([
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize_eeg_image
+                ])
 
-            self.eeg_raw_transforms = transforms.Compose([
-                transforms3D.GroupEegRawToTensor()
-            ])
+            if "eeg_raw" in self.modality:
+                self.eeg_raw_transforms = transforms.Compose([
+                    transforms3D.GroupEegRawToTensor()
+                ])
 
     def get_frame_indices(self, indices):
         x = 0
-        if self.mode == 'train':
-            x = random.randint(0, self.ratio['frame'] - 1)
-        indices = indices * self.ratio['frame'] + x
-        return indices
+        origin_indices = indices
+        if not self.feature_extraction:
+            if self.mode == 'train':
+                x = random.randint(0, self.ratio['frame'] - 1)
+            indices = indices * self.ratio['frame'] + x
+            return indices
+        else:
+            non_downsampled_indices = np.empty(0,)
+            for x in range(self.ratio['frame']):
+                indices = origin_indices * self.ratio['frame'] + x
+                non_downsampled_indices = np.append(non_downsampled_indices, indices)
+            non_downsampled_indices = np.asarray(np.sort(non_downsampled_indices), dtype=np.int64)
+            return non_downsampled_indices
 
     def get_eeg_indices(self, indices):
         start = indices[0] * self.ratio['eeg_raw']

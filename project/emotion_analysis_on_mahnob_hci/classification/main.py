@@ -6,14 +6,14 @@ if __name__ == '__main__':
     crop_size = 40
 
     parser = argparse.ArgumentParser(description='Say hello')
-    parser.add_argument('-experiment_name', default="emotion_video", help='The experiment name.')
+    parser.add_argument('-experiment_name', default="emotion_video_cls", help='The experiment name.')
     parser.add_argument('-include_session_having_no_continuous_label', default=0, type=int)
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='pretrain_ResEEG', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='pretrain_eegnet_norm', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['eeg_image'], nargs="*", help='frame, eeg_image')
+    parser.add_argument('-modality', default=['eeg_raw'], nargs="*", help='frame, eeg_image, eeg_raw')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     # N-fold settings
@@ -29,8 +29,10 @@ if __name__ == '__main__':
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str, help='The path to the entire repository.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
+    parser.add_argument('-normalize_eeg_raw', default=1, type=int, help='Whether to normalize eeg raw data?')
+
     # Models
-    parser.add_argument('-model_name', default="ResEEG", help='Model: res_eeg')
+    parser.add_argument('-model_name', default="EegNet", help='Model: res_eeg')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.901",
                         help='The filename for the backbone state dict.')
@@ -46,6 +48,17 @@ if __name__ == '__main__':
     parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
     parser.add_argument('-crop_size', default=crop_size, type=int, help='The size to conduct the cropping.')
     parser.add_argument('-batch_size', default=2, type=int)
+
+    parser.add_argument('-eegnet_window_sec', default=2, type=int, help='seconds for each sample of eegnet.')
+    parser.add_argument('-eegnet_stride_sec', default=0.25, type=float, help='stepsize for each sampling window of eegnet.')
+    parser.add_argument('-eegnet_num_channels', default=32, type=int, help='number of electrodes')
+    parser.add_argument('-eegnet_num_samples', default=512, type=int, help='seconds x sampling frequency')
+    parser.add_argument('-eegnet_dropout_rate', default=0.25, type=int, help='Dropout rate for eegnet.')
+    parser.add_argument('-eegnet_kernel_length', default=128, type=int, help='1dcnn kernel length for block1.')
+    parser.add_argument('-eegnet_kernel_length2', default=64, type=int, help='1dcnn kernel length for block2.')
+    parser.add_argument('-eegnet_F1', default=8, type=int, help='Number of spatial filters.')
+    parser.add_argument('-eegnet_F2', default=16, type=int, help='Number of temporal filters.')
+    parser.add_argument('-eegnet_D', default=2, type=int, help='The number of spatial filters for each temporal filter.')
 
     # Training settings
     parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')

@@ -22,7 +22,7 @@ class GenericParamControl(object):
 class ResnetParamControl(GenericParamControl):
     def __init__(self, trainer, gradual_release=1, release_count=8, backbone_mode="ir"):
         self.trainer = trainer
-        self.gradual_release = gradual_release,
+        self.gradual_release = gradual_release
         self.release_count = release_count
         self.backbone_mode = backbone_mode
         self.module_list = self.init_module_list()

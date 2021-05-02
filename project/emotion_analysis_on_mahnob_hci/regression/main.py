@@ -10,9 +10,9 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='psd_best', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='raw_best_leaky', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
+    parser.add_argument('-modality', default=['eeg_raw'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-normalize_eeg_raw', default=0, type=int, help='Whether to normalize eeg raw data?')
     # Models
-    parser.add_argument('-model_name', default="lstm_only", help='Model: 2d1d, 2dlstm, eegnet1d, eegnetlstm, 1d_only, lstm_only')
+    parser.add_argument('-model_name', default="eegnetlstm", help='Model: 2d1d, 2dlstm, eegnet1d, eegnetlstm, 1d_only, lstm_only')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v", help='The filename for the backbone state dict.')
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('-cnn1d_kernel_size', default=3, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 
-    parser.add_argument('-lstm_embedding_dim', default=192, type=int, help='Dimensions for LSTM feature vectors.')
+    parser.add_argument('-lstm_embedding_dim', default=256, type=int, help='Dimensions for LSTM feature vectors.')
     parser.add_argument('-lstm_hidden_dim', default=128, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-lstm_dropout', default=0.4, type=float, help='The dropout rate.')
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('-psd_num_inputs', default=192, type=int, help='electrodes x interest bands')
 
     parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
-    parser.add_argument('-min_learning_rate', default=1e-5, type=float, help='The minimum learning rate.')
+    parser.add_argument('-min_learning_rate', default=1e-6, type=float, help='The minimum learning rate.')
     parser.add_argument('-num_epochs', default=50, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-min_num_epochs', default=0, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('-batch_size', default=2, type=int)
 
     # Scheduler and Parameter Control
-    parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
+    parser.add_argument('-patience', default=10, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
     parser.add_argument('-gradual_release', default=0, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=3, type=int, help='How many layer groups to release?')

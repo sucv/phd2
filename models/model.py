@@ -81,6 +81,29 @@ class my_res50_tempool(nn.Module):
         x = x.transpose(1, 2).contiguous().squeeze()
         return x
 
+class my_eegnet_temporal(nn.Module):
+    def __init__(self, num_channels=60, num_samples=151, dropout_rate=0.5, kernel_length=64, kernel_length2=16, F1=8,
+                 D=2, F2=16, num_classes=3):
+
+        super().__init__()
+        num_inputs = num_samples // 32 * F2
+        self.spatial = EEGNet(num_channels=num_channels, num_samples=num_samples, dropout_rate=dropout_rate,
+                              kernel_length=kernel_length, kernel_length2=kernel_length2, F1=F1, F2=F2, D=D).blocks
+
+        self.logits = nn.Linear(in_features=256, out_features=num_classes)
+        self.temporal_pooling = nn.AvgPool1d(kernel_size=96)
+
+    def forward(self, x):
+        num_batches, length, channel, width, height = x.shape
+        x = x.view(-1, channel, width, height)
+        x = self.spatial(x)
+        x = x.view(num_batches * length, -1)
+        x = self.logits(x)
+        _, output_dim = x.shape
+        x = x.view(num_batches, length, output_dim).transpose(1, 2).contiguous()
+        x = self.temporal_pooling(x)
+        x = x.transpose(1, 2).contiguous().squeeze()
+        return x
 
 class my_temporal(nn.Module):
     def __init__(self, model_name, num_inputs=192, cnn1d_channels=[128, 128, 128], cnn1d_kernel_size=5, cnn1d_dropout_rate=0.1,

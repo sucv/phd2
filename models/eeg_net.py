@@ -27,7 +27,7 @@ class EEGNet(nn.Module):
             # ========================================
 
             nn.BatchNorm2d(self.F1 * self.D, momentum=0.01, affine=True, eps=1e-3),
-            nn.ELU(),
+            nn.LeakyReLU(),
             nn.AvgPool2d((1, 4), stride=4),
             nn.Dropout(p=dropoutRate))
 
@@ -39,7 +39,7 @@ class EEGNet(nn.Module):
             # ========================================
 
             nn.BatchNorm2d(self.F2, momentum=0.01, affine=True, eps=1e-3),
-            nn.ELU(),
+            nn.LeakyReLU(),
             nn.AvgPool2d((1, 8), stride=8),
             nn.Dropout(p=dropoutRate))
 

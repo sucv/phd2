@@ -305,6 +305,9 @@ class ClassificationTrainer(GenericTrainer):
             if 'eeg_image' in X:
                 inputs = X['eeg_image'].to(self.device)
 
+            if 'eeg_raw' in X:
+                inputs = X['eeg_raw'].to(self.device)
+
             labels = torch.squeeze(Y.long().to(self.device))
 
             if train_mode:

@@ -120,8 +120,8 @@ class kd_2d1d(my_2d1d):
         _, feature_dim = x.shape
         x = x.view(num_batches, length, feature_dim).transpose(1, 2).contiguous()
         x = self.model.temporal(x).transpose(1, 2).contiguous()
-        x = x.contiguous().view(num_batches * length, -1)
         knowledges['temporal'] = x
+        x = x.contiguous().view(num_batches * length, -1)
         x = self.model.regressor(x)
         x = x.view(num_batches, length, -1)
         return x, knowledges

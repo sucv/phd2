@@ -1,5 +1,5 @@
 from base.experiment import GenericExperiment
-from models.model import my_res50_tempool
+from models.model import my_res50_tempool, my_eegnet_temporal
 from base.dataset import NFoldMahnobArranger, MAHNOBDataset
 from base.checkpointer import ClassificationCheckpointer
 from base.trainer import ClassificationTrainer
@@ -55,6 +55,19 @@ class Experiment(GenericExperiment):
         self.num_classes = args.num_classes
         self.emotion_dimension = args.emotion_dimension
 
+        self.normalize_eeg_raw = args.normalize_eeg_raw
+
+        self.eegnet_num_channels = args.eegnet_num_channels
+        self.eegnet_num_samples = args.eegnet_num_samples
+        self.eegnet_dropout_rate = args.eegnet_dropout_rate
+        self.eegnet_kernel_length = args.eegnet_kernel_length
+        self.eegnet_kernel_length2 = args.eegnet_kernel_length2
+        self.eegnet_F1 = args.eegnet_F1
+        self.eegnet_F2 = args.eegnet_F2
+        self.eegnet_D = args.eegnet_D
+        self.eegnet_window_sec = args.eegnet_window_sec
+        self.eegnet_stride_sec = args.eegnet_stride_sec
+
         self.device = self.init_device()
 
     def load_config(self):
@@ -68,17 +81,32 @@ class Experiment(GenericExperiment):
             use_pretrained = False
             root_dir = ''
             state_dict_name = ''
+
+            model = my_res50_tempool(
+                backbone_mode=self.backbone_mode, embedding_dim=512, input_channels=input_channels,
+                output_dim=self.num_classes, root_dir=root_dir, use_pretrained=use_pretrained,
+                state_dict_name=state_dict_name)
+
         elif 'frame' in self.modality:
             input_channels = 3
             use_pretrained = True
             root_dir = self.model_load_path
             state_dict_name = self.backbone_state_dict_frame
+
+            model = my_res50_tempool(
+                backbone_mode=self.backbone_mode, embedding_dim=512, input_channels=input_channels,
+                output_dim=self.num_classes, root_dir=root_dir, use_pretrained=use_pretrained,
+                state_dict_name=state_dict_name)
+
+        elif "eeg_raw" in self.modality:
+
+            model = my_eegnet_temporal(num_channels=self.eegnet_num_channels, num_samples=self.eegnet_num_samples, dropout_rate=self.eegnet_dropout_rate,
+                             kernel_length=self.eegnet_kernel_length, kernel_length2=self.eegnet_kernel_length2, F1=self.eegnet_F1, F2=self.eegnet_F2,
+                             D=self.eegnet_D)
         else:
             raise ValueError("Unsupported modality!")
 
-        model = my_res50_tempool(
-            backbone_mode=self.backbone_mode, embedding_dim=512, input_channels=input_channels,
-            output_dim=self.num_classes, root_dir=root_dir, use_pretrained=use_pretrained, state_dict_name=state_dict_name)
+
 
         return model
 
@@ -111,12 +139,15 @@ class Experiment(GenericExperiment):
         fold_index = np.roll(np.arange(self.num_folds), fold)
         subject_id_of_all_folds = list(itemgetter(*fold_index)(subject_id_of_all_folds))
 
-        data_dict = fold_arranger.make_data_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
+        data_dict, normalize_dict = fold_arranger.make_data_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
         length_dict = fold_arranger.make_length_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
 
         dataloaders_dict = {}
         for partition in partition_dictionary.keys():
-            dataset = MAHNOBDataset(self.config, data_dict[partition], modality=self.modality, emotion_dimension=self.emotion_dimension,
+            dataset = MAHNOBDataset(self.config, data_dict[partition], normalize_dict=normalize_dict, modality=self.modality,
+                                    continuous_label_frequency=self.config['frequency_dict']['continuous_label'], normalize_eeg_raw=self.normalize_eeg_raw,
+                                    emotion_dimension=self.emotion_dimension, eegnet_window_sec=self.eegnet_window_sec,
+                                    eegnet_stride_sec=self.eegnet_stride_sec,
                                     time_delay=self.time_delay, class_labels=class_labels, mode=partition)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
                 dataset=dataset, batch_size=self.batch_size, shuffle=True if partition == "train" else False,

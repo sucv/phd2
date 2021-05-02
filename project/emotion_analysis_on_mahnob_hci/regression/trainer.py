@@ -80,6 +80,18 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             loss, result_dict = self.loop(data_loader, length_to_track, epoch, train_mode=False)
         return loss, result_dict
 
+    def extract(
+            self,
+            data_to_load,
+            length_to_track,
+            checkpoint_controller=None
+    ):
+        if self.verbose:
+            print("------")
+            print("Starting knowledge extraction, on device:", self.device)
+
+
+
     def test(
             self,
             data_to_load,

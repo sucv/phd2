@@ -303,13 +303,13 @@ class MAHNOBFeatureExtractorTrainer(MAHNOBRegressionTrainer):
     def validate(self, data_loader, length_to_track, feature_save_path):
         with torch.no_grad():
             self.model.eval()
-            loss = self.loop(data_loader, length_to_track, feature_save_path, train_mode=False)
-        return loss
+            self.loop(data_loader, length_to_track, feature_save_path, train_mode=False)
 
     def loop(self, data_loader, length_to_track, feature_save_path, train_mode=True):
         running_loss = 0.0
 
         total_batch_counter = 0
+
         for batch_index, (X, _, absolute_indices, sessions) in tqdm(enumerate(data_loader), total=len(data_loader)):
 
             total_batch_counter += len(sessions)
@@ -320,9 +320,15 @@ class MAHNOBFeatureExtractorTrainer(MAHNOBRegressionTrainer):
             if 'eeg_image' in X:
                 inputs = X['eeg_image'].to(self.device)
 
-            outputs = self.model(inputs)
+            os.makedirs(feature_save_path, exist_ok=True)
+            save_path = os.path.join(feature_save_path, sessions[0] + ".npy")
+            if not os.path.isfile(save_path):
+                _, knowledge = self.model(inputs)
+                temporal_knowledge = torch.squeeze(knowledge['temporal']).detach().cpu().numpy()
 
-        epoch_loss = running_loss / total_batch_counter
 
-        return epoch_loss
+                np.save(save_path, temporal_knowledge)
+
+
+
 
