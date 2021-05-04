@@ -11,7 +11,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='pretrain_eegnet_norm', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='pretrain_eegnet_cls', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_raw'], nargs="*", help='frame, eeg_image, eeg_raw')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str, help='The path to the entire repository.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
-    parser.add_argument('-normalize_eeg_raw', default=1, type=int, help='Whether to normalize eeg raw data?')
+    parser.add_argument('-normalize_eeg_raw', default=0, type=int, help='Whether to normalize eeg raw data?')
 
     # Models
     parser.add_argument('-model_name', default="EegNet", help='Model: res_eeg')
@@ -42,12 +42,12 @@ if __name__ == '__main__':
     parser.add_argument('-emotion_dimension', default=["Valence"], nargs="*", help='The emotion dimension to analysis.')
 
     # Dataloader settings
-    parser.add_argument('-window_length', default=24, type=int, help='The length in second to windowing the data.')
-    parser.add_argument('-hop_size', default=8, type=int, help='The step size or stride to move the window.')
+    parser.add_argument('-window_sec', default=2, type=int, help='The length in second to windowing the data.')
+    parser.add_argument('-hop_size', default=1, type=int, help='The step size or stride to move the window.')
     parser.add_argument('-continuous_label_frequency', default=4, type=int, help='The frequency of the continuous label.')
     parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
     parser.add_argument('-crop_size', default=crop_size, type=int, help='The size to conduct the cropping.')
-    parser.add_argument('-batch_size', default=2, type=int)
+    parser.add_argument('-batch_size', default=64, type=int)
 
     parser.add_argument('-eegnet_window_sec', default=2, type=int, help='seconds for each sample of eegnet.')
     parser.add_argument('-eegnet_stride_sec', default=0.25, type=float, help='stepsize for each sampling window of eegnet.')
@@ -61,14 +61,15 @@ if __name__ == '__main__':
     parser.add_argument('-eegnet_D', default=2, type=int, help='The number of spatial filters for each temporal filter.')
 
     # Training settings
-    parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
+    parser.add_argument('-learning_rate', default=1e-3, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=10, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-num_epochs', default=20, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-min_num_epochs', default=0, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
     parser.add_argument('-early_stopping', default=30, type=int, help='If no improvement, the number of epoch to run before halting the training')
     parser.add_argument('-load_best_at_each_epoch', default=0, type=int, help='Whether to load the best model state at the end of each epoch?')
-
+    parser.add_argument('-use_weighted_sampler', default=1, type=int,
+                        help='Whether to balance the samples of each classes using weighted sampler?')
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=10, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')

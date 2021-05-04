@@ -252,6 +252,8 @@ if __name__ == '__main__':
     parser.add_argument('-crop_size', default=crop_size, type=int, help='The size to conduct the cropping.')
     parser.add_argument('-batch_size', default=2, type=int)
 
+    parser.add_argument('-psd_num_inputs', default=192, type=int, help='electrodes x interest bands')
+
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')

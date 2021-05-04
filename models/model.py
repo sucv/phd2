@@ -94,20 +94,15 @@ class my_eegnet_temporal(nn.Module):
         self.temporal_pooling = nn.AvgPool1d(kernel_size=96)
 
     def forward(self, x):
-        num_batches, length, channel, width, height = x.shape
-        x = x.view(-1, channel, width, height)
+        num_batches, _, channel, sample = x.shape
         x = self.spatial(x)
-        x = x.view(num_batches * length, -1)
+        x = x.view(num_batches, -1)
         x = self.logits(x)
-        _, output_dim = x.shape
-        x = x.view(num_batches, length, output_dim).transpose(1, 2).contiguous()
-        x = self.temporal_pooling(x)
-        x = x.transpose(1, 2).contiguous().squeeze()
         return x
 
 class my_temporal(nn.Module):
     def __init__(self, model_name, num_inputs=192, cnn1d_channels=[128, 128, 128], cnn1d_kernel_size=5, cnn1d_dropout_rate=0.1,
-                 embedding_dim=256, hidden_dim=128, lstm_dropout_rate=0.5, output_dim=1):
+                 embedding_dim=256, hidden_dim=128, lstm_dropout_rate=0.5, bidirectional=True, output_dim=1):
         super().__init__()
         self.model_name = model_name
         if "1d" in model_name:
@@ -116,12 +111,17 @@ class my_temporal(nn.Module):
             self.regressor = nn.Linear(cnn1d_channels[-1], output_dim)
 
         elif "lstm" in model_name:
-            self.temporal = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, num_layers=2,
-                                batch_first=True, bidirectional=True, dropout=lstm_dropout_rate)
-            self.regressor = nn.Linear(hidden_dim * 2, output_dim)
+            self.temporal = nn.LSTM(input_size=num_inputs, hidden_size=hidden_dim, num_layers=2,
+                                batch_first=True, bidirectional=bidirectional, dropout=lstm_dropout_rate)
+            input_dim = hidden_dim
+            if bidirectional:
+                input_dim = hidden_dim * 2
+
+            self.regressor = nn.Linear(input_dim, output_dim)
 
 
-    def forward(self, x):
+    def forward(self, x, test=None):
+        features = {}
         if "lstm_only" in self.model_name:
             x = x.transpose(1, 2).contiguous()
             x, _ = self.temporal(x)
@@ -129,10 +129,13 @@ class my_temporal(nn.Module):
         else:
             x = self.temporal(x).transpose(1, 2).contiguous()
         batch, time_step, temporal_feature_dim = x.shape
+        features['temporal'] = x.clone()
+        if test is not None:
+            x = test
         x = x.view(-1, temporal_feature_dim)
         x = self.regressor(x)
         x = x.view(batch, time_step, 1)
-        return x
+        return x, features
 
 class my_eeglstm(nn.Module):
     def __init__(self, num_channels=60, num_samples=151, dropout_rate=0.5, kernel_length=64, kernel_length2=16, F1=8,

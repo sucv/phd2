@@ -73,12 +73,12 @@ class KnowledgeDistillationRegressionExperiment(GenericExperiment):
         teach_model_state_folder = self.config['kd_config']['2d1d']['teacher_frame_model_state_folder']
         student_backbone_state_folder = self.config['kd_config']['2d1d']['student_eeg_image_backbone_state_folder']
 
-        teacher = kd_res50(backbone_state_dict=self.backbone_state_dict_frame, backbone_mode=self.backbone_mode,
+        teacher = kd_2d1d(backbone_state_dict=self.backbone_state_dict_frame, backbone_mode=self.backbone_mode,
                           modality=['frame'], embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
                           output_dim=1, kernel_size=self.cnn1d_kernel_size, dropout=self.cnn1d_dropout,
                           root_dir=self.model_load_path, folder=teach_model_state_folder, role="teacher")
 
-        student = kd_res50(backbone_state_dict=self.backbone_state_dict_eeg, backbone_mode=self.backbone_mode,
+        student = kd_2d1d(backbone_state_dict=self.backbone_state_dict_eeg, backbone_mode=self.backbone_mode,
                           modality=['eeg_image'],
                           embedding_dim=self.cnn1d_embedding_dim, channels=self.cnn1d_channels,
                           output_dim=1, kernel_size=self.cnn1d_kernel_size, dropout=self.cnn1d_dropout,

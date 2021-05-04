@@ -284,7 +284,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                 loss_weights = torch.ones([labels.shape[0], labels.shape[1], 1]).to(self.device)
                 self.optimizer.zero_grad()
 
-            outputs = self.model(inputs)
+            outputs, _ = self.model(inputs)
 
             output_handler.place_clip_output_to_subjectwise_dict(outputs.detach().cpu().numpy(), absolute_indices,
                                                                  sessions)

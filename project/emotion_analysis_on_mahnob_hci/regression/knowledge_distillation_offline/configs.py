@@ -1,3 +1,4 @@
+
 config_knowledge_distillation = {
     "2d1d": {
         "model_name": "2d1d",
@@ -24,5 +25,6 @@ config_knowledge_distillation = {
         "lstm_hidden_dim": 256,
         "lstm_dropout": 0.4,
         "teacher_model_state_folder": "trained_2dlstm_frame"
-    }
+    },
+    "knowledge_folder": "emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame"
 }

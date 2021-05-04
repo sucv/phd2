@@ -340,10 +340,161 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         return subject_id_of_all_partitions
 
 
+class MAHNOBDatasetCls(Dataset):
+    def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'],
+                 continuous_label_frequency=4,
+                 eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=0,
+                 window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train', feature_extraction=False):
+
+        self.frame_size = frame_size
+        self.crop_size = crop_size
+        self.mode = mode
+        self.data_list = data_list
+        self.normalize_dict = normalize_dict
+        self.normalize_eeg_raw = normalize_eeg_raw
+        self.ratio = config['downsampling_interval_dict']
+        self.modality = modality
+        self.feature_extraction = feature_extraction
+        self.emotion_dimension = emotion_dimension
+        self.class_labels = class_labels,
+        self.get_3D_transforms()
+        self.targets = self.get_targets()
+
+        self.frame_window_length = int(window_sec * config['frequency_dict']['frame'])
+        self.frame_stride = int(hop_size * config['frequency_dict']['frame'])
+
+        self.eeg_window_length = int(window_sec * config['frequency_dict']['eeg_raw'])
+        self.eeg_stride = int(hop_size * config['frequency_dict']['eeg_raw'])
+
+    def get_targets(self):
+
+        targets = np.empty(0, dtype=np.int64)
+        for item in self.data_list:
+            targets = np.append(targets, int(self.class_labels[0][item[-1]]["Valence"]))
+
+        return targets
+
+    def get_3D_transforms(self):
+        normalize = transforms3D.GroupNormalize([0.5077, 0.5077, 0.5077], [0.2544, 0.2544, 0.2544])
+        normalize_eeg_image = transforms3D.GroupNormalize([0.5, 0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+
+        if self.mode == 'train':
+            if "frame" in self.modality:
+                self.image_transforms = transforms.Compose([
+                    transforms3D.GroupNumpyToPILImage(0),
+                    transforms3D.GroupRandomCrop(self.frame_size, self.crop_size),
+                    transforms3D.GroupRandomHorizontalFlip(),
+                    transforms3D.Stack(),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize
+                ])
+
+            if "eeg_image" in self.modality:
+                self.eeg_transforms = transforms.Compose([
+                    transforms3D.GroupWhiteNoiseByPCA(std_multiplier=0.1, num_components=2),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize_eeg_image
+                ])
+
+            if "eeg_raw" in self.modality:
+                eeg_raw_transforms = []
+                if self.normalize_eeg_raw:
+                    eeg_raw_transforms.append(transforms3D.GroupEegRawDataNormalize(
+                        mean=self.normalize_dict[self.mode]['mean'], std=self.normalize_dict[self.mode]['std']))
+                eeg_raw_transforms.append(transforms3D.GroupEegRawToTensor())
+
+                self.eeg_raw_transforms = transforms.Compose(eeg_raw_transforms)
+
+        else:
+            if "frame" in self.modality:
+                self.image_transforms = transforms.Compose([
+                    transforms3D.GroupNumpyToPILImage(0),
+                    transforms3D.GroupCenterCrop(self.crop_size),
+                    transforms3D.Stack(),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize
+                ])
+
+            if "eeg_image" in self.modality:
+                self.eeg_transforms = transforms.Compose([
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize_eeg_image
+                ])
+
+            if "eeg_raw" in self.modality:
+                self.eeg_raw_transforms = transforms.Compose([
+                    transforms3D.GroupEegRawToTensor()
+                ])
+
+    def get_frame_indices(self, indices):
+        x = 0
+        if self.mode == 'train':
+            x = random.randint(0, self.ratio['frame'] - 1)
+        indices = indices * self.ratio['frame'] + x
+        return indices
+
+    def get_eeg_indices(self, indices):
+        start = indices[0] * self.ratio['eeg_raw']
+        end = (indices[-1] + 1) * self.ratio['eeg_raw']
+        indices = np.arange(start, end)
+        return indices
+
+    def __len__(self):
+        return len(self.data_list)
+
+    @staticmethod
+    def load_data(directory, indices, filename):
+        filename = os.path.join(directory, filename)
+        frames = np.load(filename, mmap_mode='c')[indices]
+        return frames
+
+    def resample_eeg_raw(self, eeg_raw):
+        eeg_raw_matrix = eeg_raw[np.newaxis, :]
+        return eeg_raw_matrix
+
+    def __getitem__(self, index):
+        directory = self.data_list[index][0]
+        absolute_indices = self.data_list[index][1]
+        relative_indices = self.data_list[index][2]
+
+        session = self.data_list[index][3]
+        new_indices = self.get_frame_indices(relative_indices)
+
+        eeg_indices = self.get_eeg_indices(relative_indices)
+
+        features = {}
+
+        if "frame" in self.modality:
+            frames = self.load_data(directory, new_indices, "frame.npy")
+            frames = self.image_transforms(frames)
+            features.update({'frame': frames})
+
+        if "eeg_image" in self.modality:
+            eeg_images = self.load_data(directory, relative_indices, "eeg_image.npy")
+            eeg_images = self.eeg_transforms(eeg_images)
+            features.update({'eeg_image': eeg_images})
+
+        if "eeg_raw" in self.modality:
+            eeg_raws = self.load_data(directory, eeg_indices, "eeg_raw.npy").transpose()
+            eeg_raws = self.resample_eeg_raw(eeg_raws)
+            eeg_raws = np.asarray(eeg_raws, dtype=np.float32)
+            eeg_raws = self.eeg_raw_transforms(eeg_raws)
+            features.update({'eeg_raw': eeg_raws})
+
+        if "eeg_psd" in self.modality:
+            eeg_psds = self.load_data(directory, relative_indices, "eeg_psd.npy").transpose()
+            eeg_psds = np.asarray(eeg_psds, dtype=np.float32)
+            features.update({'eeg_raw': eeg_psds})
+
+        labels = self.class_labels[0][session]["Valence"]
+
+        return features, labels, absolute_indices, session
+
 class MAHNOBDataset(Dataset):
     def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'], continuous_label_frequency=4,
                  eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=0,
-                 window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train', feature_extraction=False):
+                 window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train', feature_extraction=False,
+                 load_knowledge=False, knowledge_path='', knowledge_folder='', fold=0):
         self.frame_size = frame_size
         self.crop_size = crop_size
         self.mode = mode
@@ -362,6 +513,9 @@ class MAHNOBDataset(Dataset):
         self.eeg_window_length = int(eegnet_window_sec * config['frequency_dict']['eeg_raw'])
         self.stride = int(eegnet_stride_sec * config['frequency_dict']['eeg_raw'])
         self.num_eegnet_windows = window_sec * config['frequency_dict']['continuous_label']
+
+        self.load_knowledge = load_knowledge
+        self.knowledge_path = os.path.join(knowledge_path, knowledge_folder, str(fold))
 
     def get_3D_transforms(self):
         normalize = transforms3D.GroupNormalize([0.5077, 0.5077, 0.5077], [0.2544, 0.2544, 0.2544])
@@ -488,7 +642,12 @@ class MAHNOBDataset(Dataset):
         if "eeg_psd" in self.modality:
             eeg_psds = self.load_data(directory, relative_indices, "eeg_psd.npy").transpose()
             eeg_psds = np.asarray(eeg_psds, dtype=np.float32)
-            features.update({'eeg_raw': eeg_psds})
+            features.update({'eeg_psd': eeg_psds})
+
+        if self.load_knowledge and self.mode != "test":
+            filename = os.path.join(session + ".npy")
+            knowledges = self.load_data(self.knowledge_path, relative_indices, filename)
+            features.update({'knowledge': knowledges})
 
         if self.class_label is None:
             # Regression on Valence

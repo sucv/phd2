@@ -1,10 +1,10 @@
 from base.experiment import GenericExperiment
 from models.model import my_res50_tempool, my_eegnet_temporal
-from base.dataset import NFoldMahnobArranger, MAHNOBDataset
+from base.dataset import NFoldMahnobArranger, MAHNOBDatasetCls
 from base.checkpointer import ClassificationCheckpointer
 from base.trainer import ClassificationTrainer
 from project.emotion_analysis_on_mahnob_hci.classification.parameter_control import ParamControl
-from base.utils import load_single_pkl
+from base.utils import load_single_pkl, init_weighted_sampler_and_weights
 
 import os
 from operator import itemgetter
@@ -32,7 +32,7 @@ class Experiment(GenericExperiment):
         self.backbone_mode = args.backbone_mode
         self.backbone_state_dict_frame = args.backbone_state_dict_frame
 
-        self.window_length = args.window_length
+        self.window_sec = args.window_sec
         self.hop_size = args.hop_size
         self.continuous_label_frequency = args.continuous_label_frequency
         self.frame_size = args.frame_size
@@ -68,6 +68,7 @@ class Experiment(GenericExperiment):
         self.eegnet_window_sec = args.eegnet_window_sec
         self.eegnet_stride_sec = args.eegnet_stride_sec
 
+        self.use_weighted_sampler = args.use_weighted_sampler
         self.device = self.init_device()
 
     def load_config(self):
@@ -100,13 +101,13 @@ class Experiment(GenericExperiment):
 
         elif "eeg_raw" in self.modality:
 
-            model = my_eegnet_temporal(num_channels=self.eegnet_num_channels, num_samples=self.eegnet_num_samples, dropout_rate=self.eegnet_dropout_rate,
-                             kernel_length=self.eegnet_kernel_length, kernel_length2=self.eegnet_kernel_length2, F1=self.eegnet_F1, F2=self.eegnet_F2,
-                             D=self.eegnet_D)
+            model = my_eegnet_temporal(num_channels=self.eegnet_num_channels, num_samples=self.eegnet_num_samples,
+                                       dropout_rate=self.eegnet_dropout_rate,
+                                       kernel_length=self.eegnet_kernel_length,
+                                       kernel_length2=self.eegnet_kernel_length2, F1=self.eegnet_F1, F2=self.eegnet_F2,
+                                       D=self.eegnet_D)
         else:
             raise ValueError("Unsupported modality!")
-
-
 
         return model
 
@@ -139,19 +140,34 @@ class Experiment(GenericExperiment):
         fold_index = np.roll(np.arange(self.num_folds), fold)
         subject_id_of_all_folds = list(itemgetter(*fold_index)(subject_id_of_all_folds))
 
-        data_dict, normalize_dict = fold_arranger.make_data_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
+        data_dict, normalize_dict = fold_arranger.make_data_dict(subject_id_of_all_folds,
+                                                                 partition_dictionary=partition_dictionary)
         length_dict = fold_arranger.make_length_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
 
         dataloaders_dict = {}
+
         for partition in partition_dictionary.keys():
-            dataset = MAHNOBDataset(self.config, data_dict[partition], normalize_dict=normalize_dict, modality=self.modality,
-                                    continuous_label_frequency=self.config['frequency_dict']['continuous_label'], normalize_eeg_raw=self.normalize_eeg_raw,
-                                    emotion_dimension=self.emotion_dimension, eegnet_window_sec=self.eegnet_window_sec,
-                                    eegnet_stride_sec=self.eegnet_stride_sec,
-                                    time_delay=self.time_delay, class_labels=class_labels, mode=partition)
-            dataloaders_dict[partition] = torch.utils.data.DataLoader(
-                dataset=dataset, batch_size=self.batch_size, shuffle=True if partition == "train" else False,
-                drop_last=True)
+            dataset = MAHNOBDatasetCls(self.config, data_dict[partition], normalize_dict=normalize_dict,
+                                       modality=self.modality,
+                                       window_sec=self.window_sec, hop_size=self.hop_size,
+                                       continuous_label_frequency=self.config['frequency_dict']['continuous_label'],
+                                       normalize_eeg_raw=self.normalize_eeg_raw,
+                                       emotion_dimension=self.emotion_dimension,
+                                       eegnet_window_sec=self.eegnet_window_sec,
+                                       eegnet_stride_sec=self.eegnet_stride_sec,
+                                       time_delay=self.time_delay, class_labels=class_labels, mode=partition)
+
+            if partition == "train":
+                sampler = None
+                if self.use_weighted_sampler:
+                    sampler, sample_weights = init_weighted_sampler_and_weights(dataset)
+
+                dataloaders_dict[partition] = torch.utils.data.DataLoader(
+                    dataset=dataset, batch_size=self.batch_size, shuffle=True if sampler is None else False,
+                    drop_last=True, sampler=sampler)
+            else:
+                dataloaders_dict[partition] = torch.utils.data.DataLoader(
+                    dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=True)
 
         return dataloaders_dict, length_dict
 
@@ -159,8 +175,11 @@ class Experiment(GenericExperiment):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
 
-        fold_arranger = NFoldMahnobArranger(dataset_load_path=self.dataset_load_path, dataset_folder=self.dataset_folder,
-                                            include_session_having_no_continuous_label=self.include_session_having_no_continuous_label, modality=self.modality)
+        fold_arranger = NFoldMahnobArranger(dataset_load_path=self.dataset_load_path,
+                                            dataset_folder=self.dataset_folder, window_sec=self.window_sec,
+                                            hop_size_sec=self.hop_size,
+                                            include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
+                                            modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
         # subject_id_of_all_folds = [[1, 6, 3], [2, 9, 16], [4, 25, 10], [5, 7, 8], [13, 14, 17], [18, 19, 20], [21, 22],
         #                            [23, 24], [27, 28], [29, 30]]
