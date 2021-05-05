@@ -29,6 +29,10 @@ class TeacherEEGLSTM(GenericExperiment):
 
         self.stamp = args.stamp
 
+        self.kd_weight = args.kd_weight
+        self.kd_loss_function = args.kd_loss_function
+        self.kl_div_T = args.kl_div_T
+
         self.modality = args.modality
         self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[
             0] + "_" + self.stamp
@@ -144,7 +148,12 @@ class TeacherEEGLSTM(GenericExperiment):
         print(subject_id_of_all_folds)
         model = self.create_model()
 
-        criterion = {'ccc': CCCLoss(), 'hint': Hint()}
+        if self.kd_loss_function == "mse":
+            criterion = {'ccc': CCCLoss(), 'kd': Hint()}
+        elif self.kd_loss_function == "kl_div":
+            criterion = {'ccc': CCCLoss(), 'kd': SoftTarget(self.kl_div_T)}
+        else:
+            raise ValueError("Unsupported loss function!")
 
         # Here goes the N-fold training.
         for fold in iter(self.folds_to_run):
@@ -155,12 +164,10 @@ class TeacherEEGLSTM(GenericExperiment):
             os.makedirs(fold_save_path, exist_ok=True)
             checkpoint_filename = os.path.join(fold_save_path, "checkpoint.pkl")
 
-            # model.init(fold)
-            # teacher.init(fold)
             dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
 
             trainer = MAHNOBRegressionTrainerLoadKnowledge(model, stamp=self.stamp, model_name=self.model_name,
-                                                           learning_rate=self.learning_rate,
+                                                           learning_rate=self.learning_rate, kd_weight=self.kd_weight,
                                                            min_learning_rate=self.min_learning_rate,
                                                            metrics=self.metrics,
                                                            save_path=fold_save_path, early_stopping=self.early_stopping,
@@ -202,13 +209,17 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='test_kd', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test_kd_50', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[8], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int, help='Which fold(s) to run in this session?')
+
+    parser.add_argument('-kd_weight', default=50, type=float, help='The weight of kd loss.')
+    parser.add_argument('-kd_loss_function', default='mse', type=str, help='mse, kl_div')
+    parser.add_argument('-kl_div_T', default=1, type=float, help='The temperature of KL_Divergence.')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
