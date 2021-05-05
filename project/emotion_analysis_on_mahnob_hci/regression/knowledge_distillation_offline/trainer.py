@@ -354,7 +354,7 @@ class MAHNOBRegressionTrainerLoadKnowledge(MAHNOBRegressionTrainer):
                 loss = loss_ccc + loss_kd
             else:
                 loss = loss_ccc
-            
+
             running_loss += loss.mean().item()
 
             if train_mode:
@@ -390,6 +390,7 @@ class MAHNOBRegressionTrainerLoadKnowledge(MAHNOBRegressionTrainer):
             plot_handler.save_output_vs_continuous_label_plot()
 
         return epoch_loss, epoch_result_dict
+
 
 class MAHNOBFeatureExtractorTrainer(MAHNOBRegressionTrainer):
     def __init__(self, model, **kwargs):

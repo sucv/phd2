@@ -1,0 +1,62 @@
+#!/bin/sh
+
+### Note that the first line tells the system that this is a shell script. 
+### Any lines started with #PBS are not comments,
+### but the job attributes for PBS Pro to read.
+
+### Request a single GPU
+### The "select=1" specifies the number of nodes
+### To ask for a whole node use "PBS -l select=1:ncpus=40:ngpus=8"
+### If you request less than 8 GPU then make the ncpus value
+###   five times the ngpus value, e.g. select=1:ncpus=5:ngpus=1
+#PBS -l select=1:ncpus=5:ngpus=1
+
+### Specify amount of time required (maximum 24 hours)
+### If you pay 5K SGD monthly then you can require 240 hours for a job :)
+#PBS -l walltime=24:00:00
+
+### Select the correct queue. For other available queues 
+### type "qstat -Q" in your console to see.
+#PBS -q dgx
+
+### Specify project code
+### e.g. 41000001 was the pilot project code
+### Job will not submit unless this is changed
+### The project code, if any, should appear in the welcome information 
+### in the console once you logged into your NSCC account.
+#PBS -P 12001577
+
+### Specify name for job
+### Here I use two variables $n_fold and $fold_to_run
+### to track the job-to-fold information.
+### If this job is for the 2nd fold of a 5-fold cv, then
+### the final job name will be semaine_5_2.
+### When the job is done, a log file named semaine_5_2.o4432523, and
+### an error file named semaine_5_2.e4432523, with
+### the "o" or "e", and job ID in the rear, will be generated. 
+### They records the standard outputs and errors during the job execution.
+#PBS -N mahnob
+
+### Standard output by default goes to file $PBS_JOBNAME.o$PBS_JOBID
+### Standard error by default goes to file $PBS_JOBNAME.e$PBS_JOBID
+### To merge standard output and error use the following
+#PBS -j oe
+
+
+### Start of commands to be run
+
+### Change to directory where the job was submitted
+cd "$PBS_O_WORKDIR" || exit $?
+
+### Since our job is to simply run the python code, and
+### we have built a personal container, we could simply
+### run the job by one line. The instructions for each segment
+### are provided below.
+
+singularity run --nv --bind ~/scratch/dataset:/media/ \
+        ~/scratch/pth_er.sif python ~/phd2/project/emotion_analysis_on_mahnob_hci/regression/knowledge_distillation_offline/teach_eeg.py \
+        -folds_to_run $fr -resume $r -high_performance_cluster 1 -kd_weight $kw -kd_loss_function $kf -kl_div_T $T\
+        -model_load_path "/scratch/users/ntu/su012/pretrained_model" \
+        -model_save_path "/scratch/users/ntu/su012/trained_model" -dataset_load_path "/scratch/users/ntu/su012/dataset/mahnob" \
+        -python_package_path "/home/users/ntu/su012/phd2" \
+        > main_log
