@@ -16,7 +16,8 @@ if __name__ == '__main__':
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int,
+                        help='Which fold(s) to run in this session?')
 
     parser.add_argument('-kd_weight', default=50, type=float, help='The weight of kd loss.')
     parser.add_argument('-kd_loss_function', default='mse', type=str, help='mse, kl_div')
@@ -65,7 +66,6 @@ if __name__ == '__main__':
                         help='The time delay between input and label, in seconds.')
     parser.add_argument('-early_stopping', default=20, type=int,
                         help='If no improvement, the number of epoch to run before halting the training')
-
 
     # Groundtruth settings
     parser.add_argument('-num_classes', default=1, type=int, help='The number of classes for the dataset.')
