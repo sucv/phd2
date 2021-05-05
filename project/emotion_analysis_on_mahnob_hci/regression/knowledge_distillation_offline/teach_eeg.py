@@ -35,7 +35,7 @@ class TeacherEEGLSTM(GenericExperiment):
 
         self.modality = args.modality
         self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[
-            0] + "_" + self.stamp
+            0] + "_" + self.stamp + "_kd_weight_" + str(self.kd_weight) + "_" + self.kd_loss_function + "_" + str(self.kl_div_T)
         self.backbone_state_dict_frame = args.backbone_state_dict_frame
         self.backbone_state_dict_eeg = args.backbone_state_dict_eeg
         self.backbone_mode = args.backbone_mode
