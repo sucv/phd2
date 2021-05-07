@@ -115,6 +115,8 @@ class Hint(nn.Module):
         super(Hint, self).__init__()
 
     def forward(self, fm_s, fm_t):
+        # fm_s = fm_s / torch.norm(fm_s, dim=2).unsqueeze(2)
+        # fm_t = fm_t / torch.norm(fm_t, dim=2).unsqueeze(2)
         loss = F.mse_loss(fm_s, fm_t)
 
         return loss

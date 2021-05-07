@@ -90,6 +90,9 @@ class TeacherEEG1D(GenericExperiment):
 
     def create_model(self):
 
+        torch.manual_seed(0)
+        torch.cuda.manual_seed(0)
+
         student = my_temporal(model_name=self.model_name, num_inputs=self.psd_num_inputs,
                               cnn1d_channels=self.cnn1d_channels, cnn1d_kernel_size=self.cnn1d_kernel_size,
                               cnn1d_dropout_rate=self.cnn1d_dropout, embedding_dim=self.lstm_embedding_dim,
@@ -120,7 +123,7 @@ class TeacherEEG1D(GenericExperiment):
 
         fold_index = np.roll(np.arange(self.num_folds), fold)
         subject_id_of_all_folds = list(itemgetter(*fold_index)(subject_id_of_all_folds))
-
+        print(subject_id_of_all_folds)
         data_dict, _ = fold_arranger.make_data_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
         length_dict = fold_arranger.make_length_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
 
@@ -146,7 +149,7 @@ class TeacherEEG1D(GenericExperiment):
                                             modality=self.modality)
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
         print(subject_id_of_all_folds)
-        model = self.create_model()
+
 
         if self.kd_loss_function == "mse":
             criterion = {'ccc': CCCLoss(), 'kd': Hint()}
@@ -159,6 +162,8 @@ class TeacherEEG1D(GenericExperiment):
         for fold in iter(self.folds_to_run):
             print("Running fold:", str(fold))
             print("How many folds?", str(self.num_folds))
+
+            model = self.create_model()
 
             fold_save_path = os.path.join(save_path, str(fold))
             os.makedirs(fold_save_path, exist_ok=True)

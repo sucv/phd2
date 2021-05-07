@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='test_kd_50', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='find_bug', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('-num_classes', default=1, type=int, help='The number of classes for the dataset.')
     parser.add_argument('-emotion_dimension', default=["Valence"], nargs="*", help='The emotion dimension to analysis.')
     parser.add_argument('-metrics', default=["rmse", "pcc", "ccc"], nargs="*", help='The evaluation metrics.')
-    parser.add_argument('-save_plot', default=0, type=int,
+    parser.add_argument('-save_plot', default=1, type=int,
                         help='Whether to plot the session-wise output/target or not?')
 
     # Dataloader settings
