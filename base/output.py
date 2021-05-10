@@ -323,11 +323,11 @@ class PlotHandlerTrial(object):
             result_list = []
 
             for metric in self.metrics:
-                result = self.epoch_result_dict[trial][emotion][metric]
+                result = self.epoch_result_dict[trial][emotion][metric][0]
                 # The pcc usually have two output, one for value and one for confidence. So
                 # here we only read and the value and discard the confidence.
                 if metric == "pcc":
-                    result = self.epoch_result_dict[trial][emotion][metric][0]
+                    result = self.epoch_result_dict[trial][emotion][metric][0][0]
                 result_list.append(result)
 
             if len(self.emotional_dimension) > 1:

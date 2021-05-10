@@ -218,7 +218,11 @@ class ContinuousMetricsCalculatorTrial:
 
             for metric in self.metrics:
                 result = self.calculator(partitionwise_output[emotion], partitionwise_continuous_label[emotion], metric)
-                partitionwise_dict[metric].append(result)
+
+                if metric == "pcc":
+                    partitionwise_dict[metric].append(result)
+                else:
+                    partitionwise_dict[metric].append([result])
 
             overall_records[emotion] = partitionwise_dict
 
