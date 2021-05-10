@@ -84,7 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('-milestone', default=[], nargs="+", type=int, help='The specific epochs to do something.')
     parser.add_argument('-load_best_at_each_epoch', default=1, type=int, help='Whether to load the best model state at the end of each epoch?')
 
-    parser.add_argument('-save_plot', default=1, type=int,
+    parser.add_argument('-save_plot', default=0, type=int,
                         help='Whether to plot the session-wise output/target or not?')
 
     args = parser.parse_args()
