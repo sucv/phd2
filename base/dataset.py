@@ -55,6 +55,156 @@ class ImageEmoClassificationNFoldArranger(object):
         raise NotImplementedError
 
 
+class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
+    r"""
+    A class to prepare files according to the n-fold manner.
+    """
+
+    def __init__(self, dataset_load_path, dataset_folder, modality, normalize_eeg_raw=True, num_electrodes=32, window_sec=24, hop_size_sec=8, continuous_label_frequency=4,
+                 partition_setting=None, include_session_having_no_continuous_label=True, feature_extraction=False):
+
+        # The root directory of the dataset.
+        super().__init__(dataset_load_path=dataset_load_path, dataset_folder=dataset_folder)
+
+        # Load the dataset information
+
+        self.dataset_info = self.get_dataset_info()
+
+        self.partition_setting = partition_setting
+        self.num_electrodes = num_electrodes
+        self.normalize_eeg_raw = normalize_eeg_raw
+
+        # Regression or Classification?
+        self.include_session_having_no_continuous_label = include_session_having_no_continuous_label
+
+        self.depth = window_sec * continuous_label_frequency
+        self.step_size = hop_size_sec * continuous_label_frequency
+
+        # Frame, EEG, which one or both?
+        self.modality = modality
+        self.get_modality_list()
+
+        self.feature_extraction = feature_extraction
+
+    def get_modality_list(self):
+
+        # if self.job == "reg_v":
+        self.modality.append("continuous_label")
+
+    def get_trial_indices_having_continuous_label(self):
+        r"""
+        Get the session indices having continuous labels.
+        :return: (list), the indices indicating which sessions have continuous labels.
+        """
+        if self.include_session_having_no_continuous_label:
+            indices = np.where(np.asarray(self.dataset_info['having_eeg']) == 1)[0]
+        else:
+            indices = np.where(self.dataset_info['having_continuous_label'] == 1)[0]
+
+        np.random.shuffle(indices)
+        return indices
+
+    def make_data_dict(self, trial_id_of_all_partitions):
+
+        # Initialize the dictionary to be outputed.
+        data_dict = {key: [] for key in trial_id_of_all_partitions}
+        length_dict = {key: [] for key in trial_id_of_all_partitions}
+        normalize_dict = {key: {} for key in trial_id_of_all_partitions}
+
+        for partition, trial_id_of_a_partition in trial_id_of_all_partitions.items():
+
+            data_of_a_partition = []
+            length_of_a_partition = []
+            if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                trial_wise_eeg_mean_cache = np.zeros((self.num_electrodes,))
+                trial_wise_eeg_std_cache = np.zeros((self.num_electrodes,))
+                num_samples = 0
+                eeg_raw_path_list = []
+
+            trial_indices = trial_id_of_a_partition
+
+            length_list = list(itemgetter(*trial_indices)(self.dataset_info['refined_processed_length']))
+            trial_name_list = list(itemgetter(*trial_indices)(self.dataset_info['session_name']))
+            directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
+                              session_name in trial_name_list]
+
+            for i in range(len(trial_indices)):
+                trial_name = trial_name_list[i]
+                length = length_list[i]
+                trial_directory = directory_list[i]
+
+
+                if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                    eeg_raw_path = os.path.join(trial_directory, "eeg_raw.npy")
+                    intermediate = np.load(eeg_raw_path)
+                    num_samples += intermediate.shape[0]
+                    trial_wise_eeg_mean_cache += np.sum(intermediate, axis=0)
+                    eeg_raw_path_list.append(eeg_raw_path)
+
+                if self.feature_extraction:
+                    depth = length
+                else:
+                    depth = self.depth
+
+                start = 0
+                end = start + depth
+
+                while end <= length:
+                    relative_indices = np.arange(start, end)
+                    data_of_a_partition.append([trial_directory, relative_indices, length, trial_name])
+                    start += self.step_size
+                    end = start + depth
+
+                if (length - depth) % self.step_size != 0:
+                    start = length - depth
+                    end = length
+                    relative_indices = np.arange(start, end)
+                    data_of_a_partition.append([trial_directory, relative_indices, length, trial_name])
+
+            data_dict[partition].extend(data_of_a_partition)
+
+            if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                eeg_raw_mean = trial_wise_eeg_mean_cache / num_samples
+
+                for eeg_raw_path in eeg_raw_path_list:
+                    trial_wise_eeg_std_cache += np.sum(np.square(np.load(eeg_raw_path) - eeg_raw_mean), axis=0)
+
+                eeg_raw_std = np.sqrt(trial_wise_eeg_std_cache / num_samples)
+                normalize_dict[partition]['mean'] = eeg_raw_mean
+                normalize_dict[partition]['std'] = eeg_raw_std
+
+        return data_dict, normalize_dict
+
+    def assign_trial_to_partition(self, trial_indices):
+        partition_dict = {}
+
+        partition_dict['train'] = trial_indices[:self.partition_setting['train']]
+        partition_dict['validate'] = trial_indices[self.partition_setting['train']:self.partition_setting['train']+self.partition_setting['validate']]
+        partition_dict['test'] = trial_indices[-self.partition_setting['test']:]
+        return partition_dict
+
+    @staticmethod
+    def partition_train_validate_test_for_subjects(subject_id_of_all_folds, partition_dictionary):
+        r"""
+        A static function to assign the subjects to folds according to the partition dictionary.
+        :param subject_id_of_all_folds: (list), the list recording the subject id of all folds.
+        :param partition_dictionary: (dict), the dictionary indicating the fold numbers of each partition.
+        :return: (dict), the dictionary indicating the subject ids of each partition.
+        """
+
+        # To assure that the fold number equals the value sum of the partition dictionary.
+        assert len(subject_id_of_all_folds) == np.sum([value for value in partition_dictionary.values()])
+
+        # Assign the subject id according to the dictionary.
+        subject_id_of_all_partitions = {
+            'train': subject_id_of_all_folds[0:partition_dictionary['train']],
+            'validate': subject_id_of_all_folds[partition_dictionary['train']:
+                                                partition_dictionary['train'] + partition_dictionary['validate']],
+            'test': subject_id_of_all_folds[-partition_dictionary['test']:]
+        }
+
+        return subject_id_of_all_partitions
+
 class NFoldMahnobArranger(VideoEmoRegressionArranger):
     r"""
     A class to prepare files according to the n-fold manner.
@@ -123,9 +273,8 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
             for subject_id_of_a_fold in subject_id_of_a_partition:
 
-                data_of_a_modal = []
                 for subject_id in subject_id_of_a_fold:
-
+                    data_of_a_modal = []
                     session_indices = self.get_session_index(subject_id)
                     if len(session_indices) > 0:
                         if len(session_indices) > 1:
@@ -661,3 +810,175 @@ class MAHNOBDataset(Dataset):
             labels = self.class_label[session]["Valence"]
 
         return features, labels, absolute_indices, session
+
+class MAHNOBDatasetTrial(Dataset):
+    def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'], continuous_label_frequency=4,
+                 eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=0,
+                 window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train', feature_extraction=False,
+                 load_knowledge=False, knowledge_path='', knowledge_folder='', fold=0):
+        self.frame_size = frame_size
+        self.crop_size = crop_size
+        self.mode = mode
+        self.data_list = data_list
+        self.normalize_dict = normalize_dict
+        self.normalize_eeg_raw = normalize_eeg_raw
+        self.ratio = config['downsampling_interval_dict']
+        self.modality = modality
+        self.feature_extraction = feature_extraction
+        self.emotion_dimension = emotion_dimension
+        self.time_delay = np.int(time_delay * 4)
+        self.get_3D_transforms()
+        self.class_label = class_labels
+        self.continuous_label_frequency = continuous_label_frequency
+        self.eegnet_window_sec = eegnet_window_sec
+        self.eeg_window_length = int(eegnet_window_sec * config['frequency_dict']['eeg_raw'])
+        self.stride = int(eegnet_stride_sec * config['frequency_dict']['eeg_raw'])
+        self.num_eegnet_windows = window_sec * config['frequency_dict']['continuous_label']
+
+        self.load_knowledge = load_knowledge
+        self.knowledge_path = os.path.join(knowledge_path, knowledge_folder, str(fold))
+
+    def get_3D_transforms(self):
+        normalize = transforms3D.GroupNormalize([0.5077, 0.5077, 0.5077], [0.2544, 0.2544, 0.2544])
+        normalize_eeg_image = transforms3D.GroupNormalize([0.5, 0.5, 0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+
+        if self.mode == 'train':
+            if "frame" in self.modality:
+                self.image_transforms = transforms.Compose([
+                    transforms3D.GroupNumpyToPILImage(0),
+                    transforms3D.GroupRandomCrop(self.frame_size, self.crop_size),
+                    transforms3D.GroupRandomHorizontalFlip(),
+                    transforms3D.Stack(),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize
+                ])
+
+            if "eeg_image" in self.modality:
+                self.eeg_transforms = transforms.Compose([
+                    transforms3D.GroupWhiteNoiseByPCA(std_multiplier=0.1, num_components=2),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize_eeg_image
+                ])
+
+            if "eeg_raw" in self.modality:
+                eeg_raw_transforms = []
+                if self.normalize_eeg_raw:
+                    eeg_raw_transforms.append(transforms3D.GroupEegRawDataNormalize(
+                        mean=self.normalize_dict[self.mode]['mean'], std=self.normalize_dict[self.mode]['std']))
+                eeg_raw_transforms.append(transforms3D.GroupEegRawToTensor())
+
+                self.eeg_raw_transforms = transforms.Compose(eeg_raw_transforms)
+
+        else:
+            if "frame" in self.modality:
+                self.image_transforms = transforms.Compose([
+                    transforms3D.GroupNumpyToPILImage(0),
+                    transforms3D.GroupCenterCrop(self.crop_size),
+                    transforms3D.Stack(),
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize
+                ])
+
+            if "eeg_image" in self.modality:
+                self.eeg_transforms = transforms.Compose([
+                    transforms3D.ToTorchFormatTensor(),
+                    normalize_eeg_image
+                ])
+
+            if "eeg_raw" in self.modality:
+                self.eeg_raw_transforms = transforms.Compose([
+                    transforms3D.GroupEegRawToTensor()
+                ])
+
+    def get_frame_indices(self, indices):
+        x = 0
+        origin_indices = indices
+        if not self.feature_extraction:
+            if self.mode == 'train':
+                x = random.randint(0, self.ratio['frame'] - 1)
+            indices = indices * self.ratio['frame'] + x
+            return indices
+        else:
+            non_downsampled_indices = np.empty(0,)
+            for x in range(self.ratio['frame']):
+                indices = origin_indices * self.ratio['frame'] + x
+                non_downsampled_indices = np.append(non_downsampled_indices, indices)
+            non_downsampled_indices = np.asarray(np.sort(non_downsampled_indices), dtype=np.int64)
+            return non_downsampled_indices
+
+    def get_eeg_indices(self, indices):
+        start = indices[0] * self.ratio['eeg_raw']
+        end = (indices[-1] + 1 + self.continuous_label_frequency * self.eegnet_window_sec) * self.ratio['eeg_raw']
+        indices = np.arange(start, end)
+        return indices
+
+    def __len__(self):
+        return len(self.data_list)
+
+    @staticmethod
+    def load_data(directory, indices, filename):
+        filename = os.path.join(directory, filename)
+        frames = np.load(filename, mmap_mode='c')[indices]
+        return frames
+
+    def resample_eeg_raw(self, eeg_raw):
+        eeg_raw_matrix = np.zeros((self.num_eegnet_windows, 1, 32, self.eeg_window_length))
+        start = 0
+        end = self.eeg_window_length
+        for i in range(self.num_eegnet_windows):
+            eeg_raw_matrix[i] = eeg_raw[:, start:end]
+            start += self.stride
+            end = start + self.eeg_window_length
+        return eeg_raw_matrix
+
+    def __getitem__(self, index):
+        directory = self.data_list[index][0]
+        relative_indices = self.data_list[index][1]
+        length = self.data_list[index][2]
+        trial = self.data_list[index][3]
+
+        new_indices = self.get_frame_indices(relative_indices)
+
+        eeg_indices = self.get_eeg_indices(relative_indices)
+
+        features = {}
+
+        if "frame" in self.modality:
+            frames = self.load_data(directory, new_indices, "frame.npy")
+            frames = self.image_transforms(frames)
+            features.update({'frame': frames})
+
+        if "eeg_image" in self.modality:
+            eeg_images = self.load_data(directory, relative_indices, "eeg_image.npy")
+            eeg_images = self.eeg_transforms(eeg_images)
+            features.update({'eeg_image': eeg_images})
+
+        if "eeg_raw" in self.modality:
+            eeg_raws = self.load_data(directory, eeg_indices, "eeg_raw.npy").transpose()
+            eeg_raws = self.resample_eeg_raw(eeg_raws)
+            eeg_raws = np.asarray(eeg_raws, dtype=np.float32)
+            eeg_raws = self.eeg_raw_transforms(eeg_raws)
+            features.update({'eeg_raw': eeg_raws})
+
+        if "eeg_psd" in self.modality:
+            eeg_psds = self.load_data(directory, relative_indices, "eeg_psd.npy").transpose()
+            eeg_psds = np.asarray(eeg_psds, dtype=np.float32)
+            features.update({'eeg_psd': eeg_psds})
+
+        if self.load_knowledge and self.mode != "test":
+            filename = os.path.join(trial + ".npy")
+            knowledges = self.load_data(self.knowledge_path, relative_indices, filename)
+            features.update({'knowledge': knowledges})
+
+        if self.class_label is None:
+            # Regression on Valence
+            labels = self.load_data(directory, relative_indices, "continuous_label.npy")
+
+            # time delay
+            labels = np.concatenate(
+                (labels[self.time_delay:, :],
+                 np.repeat(labels[-1, :][np.newaxis], repeats=self.time_delay, axis=0)), axis=0)
+        else:
+            labels = self.class_label[trial]["Valence"]
+
+        return features, labels, relative_indices, trial, length

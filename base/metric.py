@@ -139,6 +139,91 @@ def concordance_correlation_coefficient_centering(data):
     centered_data = CCC.centered_data
     return centered_data
 
+class ContinuousMetricsCalculatorTrial:
+    r"""
+    A class to calculate the metrics, usually rmse, pcc, and ccc for continuous regression.
+    """
+
+    def __init__(
+            self,
+            metrics,
+            emotional_dimension,
+            output_handler,
+            continuous_label_handler,
+    ):
+
+        # What metrics to calculate.
+        self.metrics = metrics
+
+        # What emotional dimensions to consider.
+        self.emotional_dimension = emotional_dimension
+
+        # The instances saving the data for evaluation.
+        self.output_handler = output_handler
+        self.continuous_label_handler = continuous_label_handler
+
+        # Initialize the dictionary for saving the metric results.
+        self.metric_record_dict = self.init_metric_record_dict()
+
+    def get_partitionwise_output_and_continuous_label(self):
+        return self.output_handler.partition_records, \
+               self.continuous_label_handler.partition_records
+
+
+    def get_trialwise_output_and_continuous_label(self):
+        return self.output_handler.trialwise_records, \
+               self.continuous_label_handler.trialwise_records
+
+    def init_metric_record_dict(self):
+        trialwise_dict, _ = self.get_trialwise_output_and_continuous_label()
+        metric_record_dict = {key: [] for key in trialwise_dict}
+        return metric_record_dict
+
+    @staticmethod
+    def calculator(output, label, metric):
+        if metric == "rmse":
+            result = np.sqrt(((output - label) ** 2).mean())
+        elif metric == "pcc":
+            result = pearsonr(output, label)
+        elif metric == "ccc":
+            result = ConcordanceCorrelationCoefficient.calculate_ccc(output, label)
+        else:
+            raise ValueError("Metric {} is not defined.".format(metric))
+        return result
+
+    def calculate_metrics(self):
+
+        # Load the data for three scenarios.
+        # They will all be evaluated.
+        trialwise_output, trialwise_continuous_label = self.get_trialwise_output_and_continuous_label()
+        partitionwise_output, partitionwise_continuous_label = self.get_partitionwise_output_and_continuous_label()
+
+        for (trial_id, output), (_, label) in zip(
+                trialwise_output.items(), trialwise_continuous_label.items()):
+
+            trial_record_dict = {key: {} for key in self.emotional_dimension}
+
+            for column, emotion in enumerate(self.emotional_dimension):
+                result_dict = {metric: [] for metric in self.metrics}
+                for metric in self.metrics:
+                    result = self.calculator(output[emotion], label[emotion], metric)
+                    result_dict[metric] = result
+                trial_record_dict[emotion] = result_dict
+            self.metric_record_dict[trial_id] = trial_record_dict
+
+        # Partition-wise evaluation
+        overall_records = {emotion: [] for emotion in self.emotional_dimension}
+        for emotion in self.emotional_dimension:
+            partitionwise_dict = {metric: [] for metric in self.metrics}
+
+            for metric in self.metrics:
+                result = self.calculator(partitionwise_output[emotion], partitionwise_continuous_label[emotion], metric)
+                partitionwise_dict[metric].append(result)
+
+            overall_records[emotion] = partitionwise_dict
+
+        self.metric_record_dict['overall'] = overall_records
+
 class ContinuousMetricsCalculator:
     r"""
     A class to calculate the metrics, usually rmse, pcc, and ccc for continuous regression.
