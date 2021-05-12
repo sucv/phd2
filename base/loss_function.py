@@ -137,3 +137,19 @@ class L1(nn.Module):
         loss = F.l1_loss(fm_s, fm_t)
 
         return loss
+
+class L1S(nn.Module):
+    """
+	FitNets: Hints for Thin Deep Nets
+	https://arxiv.org/pdf/1412.6550.pdf
+	"""
+
+    def __init__(self):
+        super(L1S, self).__init__()
+
+    def forward(self, fm_s, fm_t):
+        # fm_s = fm_s / torch.norm(fm_s, dim=2).unsqueeze(2)
+        # fm_t = fm_t / torch.norm(fm_t, dim=2).unsqueeze(2)
+        loss = F.smooth_l1_loss(fm_s, fm_t)
+
+        return loss

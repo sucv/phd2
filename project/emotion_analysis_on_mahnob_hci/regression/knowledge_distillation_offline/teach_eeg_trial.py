@@ -7,7 +7,7 @@ from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_of
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import \
     ParamControl
 
-from base.loss_function import CCCLoss, SoftTarget, CC, L1, L2
+from base.loss_function import CCCLoss, SoftTarget, CC, L1, L2, L1S
 
 import os
 from operator import itemgetter
@@ -147,6 +147,8 @@ class TeacherEEG1D(GenericExperiment):
             criterion = {'ccc': CCCLoss(), 'kd': L1()}
         elif self.kd_loss_function == "l2":
             criterion = {'ccc': CCCLoss(), 'kd': L2()}
+        elif self.kd_loss_function == "l1s":
+            criterion = {'ccc': CCCLoss(), 'kd': L1S()}
         else:
             raise ValueError("Unsupported loss function!")
 

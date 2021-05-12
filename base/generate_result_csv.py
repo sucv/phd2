@@ -10,32 +10,51 @@ import argparse
 def csv_generator(path_to_read_result, num_folds=10):
 
     fold_wise_csv_filename = "training_logs.csv"
+    csv_filename = os.path.join(path_to_read_result, "result.csv")
     num_folds = num_folds
     metrics = ["rmse", "pcc", "ccc"]
-    result = np.zeros((len(metrics), num_folds + 2))
+    validate_result = np.zeros((len(metrics), num_folds + 2))
+    test_result = np.zeros((len(metrics), num_folds + 2))
 
 
     for path in Path(path_to_read_result).rglob(fold_wise_csv_filename):
         fold = int(path.parts[6])
 
-        df = pd.read_csv(path)
+
+        df = pd.read_csv(path, skiprows=4)
         last_row = df.iloc[-1, :]
 
-        rmse = float(ast.literal_eval(last_row.iloc[2])[0])
-        pcc = float(last_row.iloc[4])
-        ccc = float(ast.literal_eval(last_row.iloc[7])[0])
+        best_epoch = df["best_epoch"].iloc[-2]
+        result_of_best_epoch = df.loc[df['epoch'] == best_epoch]
 
-        result[0, fold] = rmse
-        result[1, fold] = pcc
-        result[2, fold] = ccc
+        test_rmse = float(ast.literal_eval(last_row.iloc[2])[0])
+        test_pcc = float(last_row.iloc[4])
+        test_ccc = float(ast.literal_eval(last_row.iloc[7])[0])
 
-    result[:, -2] = np.mean(result[:, :-2], axis=1)
-    result[:, -1] = np.std(result[:, :-2], axis=1)
+        val_rmse = float(ast.literal_eval(result_of_best_epoch["val_rmse_v"].values[0])[0])
+        val_pcc = result_of_best_epoch["val_pcc_v_v"].values[0]
+        val_ccc = float(ast.literal_eval(result_of_best_epoch["val_ccc_v"].values[0])[0])
 
-    result_csv = pd.DataFrame(result, columns = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mean', 'std'], index=metrics)
+        test_result[0, fold] = test_rmse
+        test_result[1, fold] = test_pcc
+        test_result[2, fold] = test_ccc
 
-    csv_filename = os.path.join(path_to_read_result, "result.csv")
+        validate_result[0, fold] = val_rmse
+        validate_result[1, fold] = val_pcc
+        validate_result[2, fold] = val_ccc
+
+    test_result[:, -2] = np.mean(test_result[:, :-2], axis=1)
+    test_result[:, -1] = np.std(test_result[:, :-2], axis=1)
+
+    validate_result[:, -2] = np.mean(validate_result[:, :-2], axis=1)
+    validate_result[:, -1] = np.std(validate_result[:, :-2], axis=1)
+
+    result_csv = pd.DataFrame(validate_result, columns = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mean', 'std'], index=metrics).rename_axis("val")
     result_csv.to_csv(csv_filename)
+
+    result_csv = pd.DataFrame(test_result,
+                              columns=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mean', 'std'], index=metrics).rename_axis("test")
+    result_csv.to_csv(csv_filename, mode='a')
 
 
 if __name__ == "__main__":

@@ -56,7 +56,7 @@ cd "$PBS_O_WORKDIR" || exit $?
 singularity run --nv --bind ~/scratch/dataset:/media/ \
         ~/scratch/pth_er.sif python ~/phd2/project/emotion_analysis_on_mahnob_hci/regression/knowledge_distillation_offline/main_teach_eeg.py \
         -folds_to_run $fr -resume $r -high_performance_cluster 1 -kd_weight $kw -kd_loss_function $kf -kl_div_T $T\
-        -model_load_path "/scratch/users/ntu/su012/pretrained_model" \
+        -model_load_path "/scratch/users/ntu/su012/pretrained_model" -experiment_name "nscc_emo_kd"\
         -model_save_path "/scratch/users/ntu/su012/trained_model" -dataset_load_path "/scratch/users/ntu/su012/dataset/mahnob" \
-        -python_package_path "/home/users/ntu/su012/phd2" \
+        -python_package_path "/home/users/ntu/su012/phd2" -knowledge_load_path "/scratch/users/ntu/su012/pretrained_model/emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame_trial" \
         > main_log
