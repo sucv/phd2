@@ -142,11 +142,11 @@ class Experiment(GenericExperiment):
 
         # Set the fold-to-partition configuration.
         # Each fold have approximately the same number of sessions.
-
+        self.init_random_seed()
         trial_index = np.roll(trial_id_of_all_folds, 24 * fold)
         trial_id_of_all_partitions = fold_arranger.assign_trial_to_partition(trial_index)
         data_dict, normalize_dict = fold_arranger.make_data_dict(trial_id_of_all_partitions)
-
+        self.init_random_seed()
         dataloaders_dict = {}
         for partition in partition_setting.keys():
             dataset = MAHNOBDatasetTrial(self.config, data_dict[partition], normalize_dict=normalize_dict,
@@ -195,6 +195,10 @@ class Experiment(GenericExperiment):
             dataloaders_dict, normalize_dict = self.init_dataloader(partition_setting, trial_id_of_all_partitions,
                                                                     fold_arranger, fold)
 
+            # path = "/home/zhangsu/phd2/load/trained_2d1d_frame/2d1d_v_1.pth"
+            # state_dict = torch.load(path, map_location='cpu')
+            # model.load_state_dict(state_dict)
+
             trainer = MAHNOBRegressionTrainerTrial(model, stamp=self.stamp, model_name=self.model_name,
                                                    learning_rate=self.learning_rate,
                                                    min_learning_rate=self.min_learning_rate, metrics=self.metrics,
@@ -215,7 +219,7 @@ class Experiment(GenericExperiment):
                 checkpoint_controller.init_csv_logger(self.args, self.config)
 
             if not trainer.fit_finished:
-                trainer.fit(dataloaders_dict, 0, num_epochs=self.num_epochs,
+                trainer.fit(dataloaders_dict, num_epochs=self.num_epochs,
                             min_num_epoch=self.min_num_epochs,
                             save_model=True, parameter_controller=parameter_controller,
                             checkpoint_controller=checkpoint_controller)

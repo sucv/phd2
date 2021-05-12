@@ -7,10 +7,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="emo_kd", help='The experiment name.')
-    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=2, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='find_bug', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='trial_no_x', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
@@ -19,8 +19,9 @@ if __name__ == '__main__':
     parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int,
                         help='Which fold(s) to run in this session?')
 
-    parser.add_argument('-kd_weight', default=50, type=float, help='The weight of kd loss.')
-    parser.add_argument('-kd_loss_function', default='mse', type=str, help='mse, kl_div')
+    parser.add_argument('-ccc_weight', default=0.01, type=float, help='The weight of kd loss.')
+    parser.add_argument('-kd_weight', default=5, type=float, help='The weight of kd loss.')
+    parser.add_argument('-kd_loss_function', default='l1', type=str, help='l1, l2')
     parser.add_argument('-kl_div_T', default=1, type=float, help='The temperature of KL_Divergence.')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
@@ -32,6 +33,8 @@ if __name__ == '__main__':
     parser.add_argument('-model_save_path', default='/home/zhangsu/phd2/save', type=str,
                         help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str,
+                        help='The path to the entire repository.')
+    parser.add_argument('-knowledge_load_path', default='/home/zhangsu/phd2/load/emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame', type=str,
                         help='The path to the entire repository.')
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
@@ -46,7 +49,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-cnn1d_embedding_dim', default=128, type=int,
                         help='Dimensions for temporal convolutional networks feature vectors.')
-    parser.add_argument('-cnn1d_channels', default=[128, 128, 128], nargs="+", type=int,
+    parser.add_argument('-cnn1d_channels', default=[128, 128], nargs="+", type=int,
                         help='The specific epochs to do something.')
     parser.add_argument('-cnn1d_kernel_size', default=3, type=int,
                         help='The size of the 1D kernel for temporal convolutional networks.')
@@ -58,7 +61,7 @@ if __name__ == '__main__':
                         help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-lstm_dropout', default=0.4, type=float, help='The dropout rate.')
 
-    parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
+    parser.add_argument('-learning_rate', default=1e-4, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-6, type=float, help='The minimum learning rate.')
     parser.add_argument('-num_epochs', default=10, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-min_num_epochs', default=5, type=int, help='The minimum epoch to run at least.')
@@ -71,7 +74,7 @@ if __name__ == '__main__':
     parser.add_argument('-num_classes', default=1, type=int, help='The number of classes for the dataset.')
     parser.add_argument('-emotion_dimension', default=["Valence"], nargs="*", help='The emotion dimension to analysis.')
     parser.add_argument('-metrics', default=["rmse", "pcc", "ccc"], nargs="*", help='The evaluation metrics.')
-    parser.add_argument('-save_plot', default=1, type=int,
+    parser.add_argument('-save_plot', default=0, type=int,
                         help='Whether to plot the session-wise output/target or not?')
 
     # Dataloader settings
@@ -94,7 +97,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
-    from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg import TeacherEEG1D
+    from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg_trial import TeacherEEG1D
 
     experiment_handler = TeacherEEG1D(args)
     experiment_handler.experiment()

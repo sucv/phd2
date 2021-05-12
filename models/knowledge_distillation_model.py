@@ -6,7 +6,7 @@ from models.temporal_convolutional_model import TemporalConvNet
 import os
 
 import torch
-from torch.nn import Linear, BatchNorm1d, BatchNorm2d, Dropout, Sequential, Module
+from torch.nn import Linear, BatchNorm1d, BatchNorm2d, Dropout, Sequential, Module, AvgPool1d
 
 
 class kd_res50(Module):
@@ -110,6 +110,7 @@ class kd_2d1d(my_2d1d):
             for param in self.model.parameters():
                 param.requires_grad = False
 
+        self.avg_pool = AvgPool1d(kernel_size=16, stride=16)
     def forward(self, x):
         knowledges = {}
         num_batches, length, channel, width, height = x.shape
@@ -120,7 +121,7 @@ class kd_2d1d(my_2d1d):
         _, feature_dim = x.shape
         x = x.view(num_batches, length, feature_dim).transpose(1, 2).contiguous()
         x = self.model.temporal(x).transpose(1, 2).contiguous()
-        knowledges['temporal'] = x
+        knowledges['temporal'] = self.avg_pool(x.clone().transpose(1, 2)).transpose(1, 2).squeeze()
         x = x.contiguous().view(num_batches * length, -1)
         x = self.model.regressor(x)
         x = x.view(num_batches, length, -1)

@@ -179,8 +179,9 @@ class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
         partition_dict = {}
 
         partition_dict['train'] = trial_indices[:self.partition_setting['train']]
-        partition_dict['validate'] = trial_indices[self.partition_setting['train']:self.partition_setting['train']+self.partition_setting['validate']]
-        partition_dict['test'] = trial_indices[-self.partition_setting['test']:]
+        if not self.feature_extraction:
+            partition_dict['validate'] = trial_indices[self.partition_setting['train']:self.partition_setting['train']+self.partition_setting['validate']]
+            partition_dict['test'] = trial_indices[-self.partition_setting['test']:]
         return partition_dict
 
     @staticmethod
@@ -815,7 +816,7 @@ class MAHNOBDatasetTrial(Dataset):
     def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'], continuous_label_frequency=4,
                  eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=0,
                  window_sec=24, hop_size=8, time_delay=0, class_labels=None, mode='train', feature_extraction=False,
-                 load_knowledge=False, knowledge_path='', knowledge_folder='', fold=0):
+                 load_knowledge=False, knowledge_path='', fold=0):
         self.frame_size = frame_size
         self.crop_size = crop_size
         self.mode = mode
@@ -836,7 +837,7 @@ class MAHNOBDatasetTrial(Dataset):
         self.num_eegnet_windows = window_sec * config['frequency_dict']['continuous_label']
 
         self.load_knowledge = load_knowledge
-        self.knowledge_path = os.path.join(knowledge_path, knowledge_folder, str(fold))
+        self.knowledge_path = os.path.join(knowledge_path, str(fold))
 
     def get_3D_transforms(self):
         normalize = transforms3D.GroupNormalize([0.5077, 0.5077, 0.5077], [0.2544, 0.2544, 0.2544])
@@ -965,7 +966,7 @@ class MAHNOBDatasetTrial(Dataset):
             eeg_psds = np.asarray(eeg_psds, dtype=np.float32)
             features.update({'eeg_psd': eeg_psds})
 
-        if self.load_knowledge and self.mode != "test":
+        if self.load_knowledge:
             filename = os.path.join(trial + ".npy")
             knowledges = self.load_data(self.knowledge_path, relative_indices, filename)
             features.update({'knowledge': knowledges})

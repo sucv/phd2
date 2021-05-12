@@ -105,18 +105,35 @@ class CC(nn.Module):
         return corr_mat
 
 
-class Hint(nn.Module):
+class L2(nn.Module):
     """
 	FitNets: Hints for Thin Deep Nets
 	https://arxiv.org/pdf/1412.6550.pdf
 	"""
 
     def __init__(self):
-        super(Hint, self).__init__()
+        super(L2, self).__init__()
 
     def forward(self, fm_s, fm_t):
         # fm_s = fm_s / torch.norm(fm_s, dim=2).unsqueeze(2)
         # fm_t = fm_t / torch.norm(fm_t, dim=2).unsqueeze(2)
         loss = F.mse_loss(fm_s, fm_t)
+
+        return loss
+
+
+class L1(nn.Module):
+    """
+	FitNets: Hints for Thin Deep Nets
+	https://arxiv.org/pdf/1412.6550.pdf
+	"""
+
+    def __init__(self):
+        super(L1, self).__init__()
+
+    def forward(self, fm_s, fm_t):
+        # fm_s = fm_s / torch.norm(fm_s, dim=2).unsqueeze(2)
+        # fm_t = fm_t / torch.norm(fm_t, dim=2).unsqueeze(2)
+        loss = F.l1_loss(fm_s, fm_t)
 
         return loss

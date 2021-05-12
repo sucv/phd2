@@ -207,7 +207,9 @@ class ContinuousMetricsCalculatorTrial:
                 result_dict = {metric: [] for metric in self.metrics}
                 for metric in self.metrics:
                     result = self.calculator(output[emotion], label[emotion], metric)
-                    result_dict[metric] = result
+                    result_dict[metric] = [result]
+                    if metric == "pcc":
+                        result_dict[metric] = result
                 trial_record_dict[emotion] = result_dict
             self.metric_record_dict[trial_id] = trial_record_dict
 

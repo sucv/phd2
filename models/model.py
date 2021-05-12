@@ -129,13 +129,41 @@ class my_temporal(nn.Module):
         else:
             x = self.temporal(x).transpose(1, 2).contiguous()
         batch, time_step, temporal_feature_dim = x.shape
-        features['temporal'] = x.clone()
+        features['temporal'] = x
         if test is not None:
             x = test
         x = x.view(-1, temporal_feature_dim)
         x = self.regressor(x)
         x = x.view(batch, time_step, 1)
         return x, features
+
+
+class my_test(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        path = "/home/zhangsu/phd2/load/trained_2d1d_frame/2d1d_v_1.pth"
+        state_dict = torch.load(path, map_location='cpu')
+        new_dict = {}
+
+        for key, value in state_dict.items():
+            if "regressor" in key:
+                key = key[10:]
+                new_dict[key] = value
+
+        self.regressor = nn.Linear(128, 1)
+        # self.regressor.load_state_dict(new_dict)
+        # for param in self.regressor.parameters():
+        #     param.requires_grad = False
+
+
+    def forward(self, x, test=None):
+        batch, step, feat = x.shape
+        x = x.view(-1, feat)
+        x = self.regressor(x)
+        x = x.view(batch, step, 1)
+        return x
+
 
 class my_eeglstm(nn.Module):
     def __init__(self, num_channels=60, num_samples=151, dropout_rate=0.5, kernel_length=64, kernel_length2=16, F1=8,

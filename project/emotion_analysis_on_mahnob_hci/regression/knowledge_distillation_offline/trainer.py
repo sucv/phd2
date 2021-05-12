@@ -1,9 +1,9 @@
 from base.trainer import ClassificationTrainer
-from project.emotion_analysis_on_mahnob_hci.regression.trainer import MAHNOBRegressionTrainer
-from base.output import ContinuousOutputHandlerNPY
-from base.metric import ContinuousMetricsCalculator
-from base.output import PlotHandler
-from base.loss_function import Hint
+from project.emotion_analysis_on_mahnob_hci.regression.trainer import MAHNOBRegressionTrainer, MAHNOBRegressionTrainerTrial
+from base.output import ContinuousOutputHandlerNPY, ContinuousOutputHandlerNPYTrial
+from base.metric import ContinuousMetricsCalculator, ContinuousMetricsCalculatorTrial
+from base.output import PlotHandler, PlotHandlerTrial
+from base.loss_function import L1, L2
 
 import os
 import time
@@ -137,7 +137,7 @@ class MahnobResnetKnowledgeDistillationTrainer(ClassificationTrainer):
                 if self.early_stopping_counter <= 0:
                     self.fit_finished = True
 
-            if isinstance(self.criterion, Hint):
+            if isinstance(self.criterion, L2):
                 self.scheduler.step(validate_loss)
             else:
                 self.scheduler.step(validate_acc)
@@ -391,6 +391,107 @@ class MAHNOBRegressionTrainerLoadKnowledge(MAHNOBRegressionTrainer):
 
         return epoch_loss, epoch_result_dict
 
+class MAHNOBRegressionTrainerLoadKnowledgeTrial(MAHNOBRegressionTrainerTrial):
+    def __init__(self, model, model_name='2d1d', save_path=None, max_epoch=100, early_stopping=30, kd_weight=50, ccc_weight=1,
+                 criterion=None, milestone=[0], patience=10, factor=0.1, learning_rate=0.00001, device='cpu',
+                 emotional_dimension=['Valence'], metrics=None, verbose=False, print_training_metric=False,
+                 load_best_at_each_epoch=False, save_plot=0, **kwargs):
+
+        super().__init__(model, model_name, save_path, max_epoch, early_stopping, criterion, milestone, patience,
+                         factor, learning_rate, device, emotional_dimension, metrics, verbose, print_training_metric,
+                         load_best_at_each_epoch, save_plot, **kwargs)
+
+        self.kd_weight = kd_weight
+        self.ccc_weight = ccc_weight
+
+    def loop(self, data_loader, epoch, train_mode=True):
+        running_loss = 0.0
+
+        output_handler = ContinuousOutputHandlerNPYTrial(self.emotional_dimension)
+        continuous_label_handler = ContinuousOutputHandlerNPYTrial(self.emotional_dimension)
+
+        # This object calculate the metrics, usually by root mean square error, pearson correlation
+        # coefficient, and concordance correlation coefficient.
+        metric_handler = ContinuousMetricsCalculatorTrial(self.metrics, self.emotional_dimension,
+                                                     output_handler, continuous_label_handler)
+        total_batch_counter = 0
+        for batch_index, (X, Y, indices, trials, lengths) in tqdm(enumerate(data_loader), total=len(data_loader)):
+
+            total_batch_counter += len(trials)
+
+            if 'frame' in X:
+                inputs = X['frame'].to(self.device)
+
+            if 'eeg_image' in X:
+                inputs = X['eeg_image'].to(self.device)
+
+            if 'eeg_raw' in X:
+                inputs = X['eeg_raw'].to(self.device)
+
+            if 'eeg_psd' in X:
+                inputs = X['eeg_psd'].to(self.device)
+
+            #if train_mode:
+            knowledges = X['knowledge'].to(self.device)
+
+            labels = torch.squeeze(Y.float().to(self.device), dim=2)
+
+            # Determine the weight for loss function
+            if train_mode:
+                loss_weights = torch.ones([labels.shape[0], labels.shape[1], 1]).to(self.device)
+                self.optimizer.zero_grad()
+
+            outputs, features = self.model(inputs)
+            # outputs = self.model(knowledges)
+
+            output_handler.update_output_for_seen_trials(outputs.detach().cpu().numpy(), trials, indices, lengths)
+            continuous_label_handler.update_output_for_seen_trials(labels.detach().cpu().numpy()[:, :, np.newaxis], trials, indices, lengths)
+
+            loss_ccc = self.criterion['ccc'](outputs, labels.unsqueeze(2))
+
+            if train_mode:
+                loss_kd = self.criterion['kd'](knowledges, features['temporal']) * self.kd_weight
+                loss = self.ccc_weight * loss_ccc + loss_kd
+                # loss = loss_ccc
+            else:
+                loss_kd = self.criterion['kd'](knowledges, features['temporal']) * self.kd_weight
+                loss = self.ccc_weight * loss_ccc + loss_kd
+                # loss = loss_ccc
+
+            running_loss += loss.mean().item()
+
+            if train_mode:
+                loss.backward()
+                self.optimizer.step()
+
+            #  print_progress(batch_index, len(data_loader))
+
+        epoch_loss = running_loss / total_batch_counter
+
+        output_handler.average_trial_wise_records()
+        continuous_label_handler.average_trial_wise_records()
+
+        output_handler.concat_records()
+        continuous_label_handler.concat_records()
+
+
+        # Compute the root mean square error, pearson correlation coefficient and significance, and the
+        # concordance correlation coefficient.
+        # They are calculated by  first concatenating all the output
+        # and continuous labels to two long arrays, and then calculate the metrics.
+        metric_handler.calculate_metrics()
+        epoch_result_dict = metric_handler.metric_record_dict
+
+        if self.save_plot:
+            # This object plot the figures and save them.
+            plot_handler = PlotHandlerTrial(self.metrics, self.emotional_dimension, epoch_result_dict,
+                                       output_handler.trialwise_records, continuous_label_handler.trialwise_records,
+                                       epoch=epoch, train_mode=train_mode,
+                                       directory_to_save_plot=self.save_path)
+            plot_handler.save_output_vs_continuous_label_plot()
+
+        return epoch_loss, epoch_result_dict
+
 
 class MAHNOBFeatureExtractorTrainer(MAHNOBRegressionTrainer):
     def __init__(self, model, **kwargs):
@@ -409,6 +510,39 @@ class MAHNOBFeatureExtractorTrainer(MAHNOBRegressionTrainer):
         for batch_index, (X, _, absolute_indices, sessions) in tqdm(enumerate(data_loader), total=len(data_loader)):
 
             total_batch_counter += len(sessions)
+
+            if 'frame' in X:
+                inputs = X['frame'].to(self.device)
+
+            if 'eeg_image' in X:
+                inputs = X['eeg_image'].to(self.device)
+
+            os.makedirs(feature_save_path, exist_ok=True)
+            save_path = os.path.join(feature_save_path, sessions[0] + ".npy")
+            if not os.path.isfile(save_path):
+                _, knowledge = self.model(inputs)
+                temporal_knowledge = torch.squeeze(knowledge['temporal']).detach().cpu().numpy()
+
+
+                np.save(save_path, temporal_knowledge)
+
+class MAHNOBFeatureExtractorTrainerTrial(MAHNOBRegressionTrainer):
+    def __init__(self, model, **kwargs):
+        super().__init__(model, **kwargs)
+
+    def validate(self, data_loader, feature_save_path):
+        with torch.no_grad():
+            self.model.eval()
+            self.loop(data_loader, feature_save_path, train_mode=False)
+
+    def loop(self, data_loader, feature_save_path, train_mode=True):
+        running_loss = 0.0
+
+        total_batch_counter = 0
+
+        for batch_index, (X, _, _, sessions, _) in tqdm(enumerate(data_loader), total=len(data_loader)):
+
+            total_batch_counter += 1
 
             if 'frame' in X:
                 inputs = X['frame'].to(self.device)

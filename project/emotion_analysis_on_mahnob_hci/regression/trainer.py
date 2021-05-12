@@ -1,7 +1,7 @@
 from base.trainer import GenericTrainer
-from base.output import ContinuousOutputHandlerNPYTrial
-from base.metric import ContinuousMetricsCalculatorTrial
-from base.output import PlotHandlerTrial
+from base.output import ContinuousOutputHandlerNPY, ContinuousOutputHandlerNPYTrial
+from base.metric import ContinuousMetricsCalculator, ContinuousMetricsCalculatorTrial
+from base.output import PlotHandler, PlotHandlerTrial
 
 import os
 import time
@@ -79,18 +79,6 @@ class MAHNOBRegressionTrainer(GenericTrainer):
             self.model.eval()
             loss, result_dict = self.loop(data_loader, length_to_track, epoch, train_mode=False)
         return loss, result_dict
-
-    def extract(
-            self,
-            data_to_load,
-            length_to_track,
-            checkpoint_controller=None
-    ):
-        if self.verbose:
-            print("------")
-            print("Starting knowledge extraction, on device:", self.device)
-
-
 
     def test(
             self,
@@ -463,7 +451,6 @@ class MAHNOBRegressionTrainerTrial(GenericTrainer):
     def fit(
             self,
             data_to_load,
-            length_to_track,
             num_epochs=100,
             min_num_epoch=10,
             checkpoint_controller=None,
@@ -632,7 +619,7 @@ class MAHNOBRegressionTrainerTrial(GenericTrainer):
 
             output_handler.update_output_for_seen_trials(outputs.detach().cpu().numpy(), trials, indices, lengths)
             continuous_label_handler.update_output_for_seen_trials(labels.detach().cpu().numpy()[:, :, np.newaxis], trials, indices, lengths)
-            loss = self.criterion(outputs, labels.unsqueeze(2)) * outputs.size(0)
+            loss = self.criterion(outputs, labels.unsqueeze(2))
 
             running_loss += loss.mean().item()
 
