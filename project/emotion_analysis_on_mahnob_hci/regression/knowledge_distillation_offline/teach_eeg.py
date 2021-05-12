@@ -74,6 +74,8 @@ class TeacherEEG1D(GenericExperiment):
 
         self.metrics = args.metrics
         self.save_plot = args.save_plot
+
+        self.knowledge_load_path = args.knowledge_load_path
         self.device = self.init_device()
 
     def load_config(self):
@@ -132,8 +134,7 @@ class TeacherEEG1D(GenericExperiment):
             dataset = MAHNOBDataset(self.config['generic_config'], data_dict[partition], modality=self.modality,
                                     emotion_dimension=self.emotion_dimension,
                                     time_delay=0, class_labels=class_labels, mode=partition,
-                                    load_knowledge=True, knowledge_path=self.model_load_path,
-                                    knowledge_folder=self.config['kd_config']['knowledge_folder'], fold=fold)
+                                    load_knowledge=True, knowledge_path=self.knowledge_load_path, fold=fold)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
                 dataset=dataset, batch_size=self.batch_size, shuffle=True if partition == "train" else False)
 
