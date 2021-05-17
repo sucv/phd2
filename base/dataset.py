@@ -794,7 +794,7 @@ class MAHNOBDataset(Dataset):
             eeg_psds = np.asarray(eeg_psds, dtype=np.float32)
             features.update({'eeg_psd': eeg_psds})
 
-        if self.load_knowledge and self.mode != "test":
+        if self.load_knowledge:
             filename = os.path.join(session + ".npy")
             knowledges = self.load_data(self.knowledge_path, relative_indices, filename)
             features.update({'knowledge': knowledges})

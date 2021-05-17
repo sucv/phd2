@@ -19,7 +19,7 @@ from torch.utils import data
 
 
 class TeacherEEG1D(GenericExperiment):
-    def __init__(self, args):
+    def __init__(self, args, ccc_weight=None, kd_weight=None):
         super().__init__(args)
 
         self.num_folds = args.num_folds
@@ -28,8 +28,14 @@ class TeacherEEG1D(GenericExperiment):
 
         self.stamp = args.stamp
 
-        self.ccc_weight = args.ccc_weight
-        self.kd_weight = args.kd_weight
+        self.ccc_weight = ccc_weight
+        if ccc_weight is None:
+            self.ccc_weight = args.ccc_weight
+
+        self.kd_weight = kd_weight
+        if kd_weight is None:
+            self.kd_weight = args.kd_weight
+
         self.kd_loss_function = args.kd_loss_function
         self.kl_div_T = args.kl_div_T
 

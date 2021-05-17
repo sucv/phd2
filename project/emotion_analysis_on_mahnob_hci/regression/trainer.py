@@ -278,7 +278,8 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                                                                  sessions)
             continuous_label_handler.place_clip_output_to_subjectwise_dict(
                 labels.detach().cpu().numpy()[:, :, np.newaxis], absolute_indices, sessions)
-            loss = self.criterion(outputs, labels.unsqueeze(2)) * outputs.size(0)
+
+            loss = self.criterion(outputs, labels.unsqueeze(2))
 
             running_loss += loss.mean().item()
 

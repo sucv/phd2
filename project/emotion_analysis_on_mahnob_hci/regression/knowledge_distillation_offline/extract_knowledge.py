@@ -8,7 +8,7 @@ from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_of
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import \
     ParamControl
 
-from base.loss_function import CCCLoss, SoftTarget, CC, Hint
+from base.loss_function import CCCLoss, SoftTarget, CC
 
 import os
 from operator import itemgetter
@@ -93,7 +93,7 @@ class KnowledgeExtractor(GenericExperiment):
         elif self.num_folds == 9:
             partition_dictionary = {'train': 6, 'validate': 2, 'test': 1}
         elif self.num_folds == 10:
-            partition_dictionary = {'train': 9, 'validate': 0, 'test': 1}
+            partition_dictionary = {'train': 10, 'validate': 0, 'test': 0}
         else:
             raise ValueError("The fold number is not supported or realistic!")
 
@@ -134,7 +134,7 @@ class KnowledgeExtractor(GenericExperiment):
         print(subject_id_of_all_folds)
         model = self.create_model()
 
-        criterion = {'hint': Hint()}
+        criterion = {}
 
         # Here goes the N-fold training.
         for fold in iter(self.folds_to_run):
@@ -168,16 +168,16 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="emo_kd", help='The experiment name.')
-    parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=2, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
     parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['eeg_image', 'frame'], nargs="*", help='frame, eeg_image')
+    parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[0,1,2,3,4,5,6,7,8,9], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
@@ -200,7 +200,7 @@ if __name__ == '__main__':
     parser.add_argument('-knowledges', default=['logit', 'hint', 'nst', 'pkt', 'cc'], nargs="*",
                         help='frame, eeg_image')
 
-    parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.86272",
+    parser.add_argument('-backbone_state_dict_frame', default="2d1d_v",
                         help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v",
                         help='The filename for the backbone state dict.')
@@ -226,7 +226,7 @@ if __name__ == '__main__':
                         help='The frequency of the continuous label.')
     parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
     parser.add_argument('-crop_size', default=crop_size, type=int, help='The size to conduct the cropping.')
-    parser.add_argument('-batch_size', default=2, type=int)
+    parser.add_argument('-batch_size', default=1, type=int)
 
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')

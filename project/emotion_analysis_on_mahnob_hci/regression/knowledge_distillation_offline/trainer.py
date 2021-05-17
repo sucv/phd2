@@ -297,7 +297,7 @@ class MAHNOBRegressionKnowledgeDistillationTrainer(MAHNOBRegressionTrainer):
 
 
 class MAHNOBRegressionTrainerLoadKnowledge(MAHNOBRegressionTrainer):
-    def __init__(self, model, model_name='2d1d', save_path=None, max_epoch=100, early_stopping=30, kd_weight=50,
+    def __init__(self, model, model_name='2d1d', save_path=None, max_epoch=100, early_stopping=30, kd_weight=50, ccc_weight=1,
                  criterion=None, milestone=[0], patience=10, factor=0.1, learning_rate=0.00001, device='cpu',
                  emotional_dimension=['Valence'], metrics=None, verbose=False, print_training_metric=False,
                  load_best_at_each_epoch=False, save_plot=0, **kwargs):
@@ -307,6 +307,7 @@ class MAHNOBRegressionTrainerLoadKnowledge(MAHNOBRegressionTrainer):
                          load_best_at_each_epoch, save_plot, **kwargs)
 
         self.kd_weight = kd_weight
+        self.ccc_weight = ccc_weight
 
     def loop(self, data_loader, length_to_track, epoch, train_mode=True):
         running_loss = 0.0
@@ -332,8 +333,8 @@ class MAHNOBRegressionTrainerLoadKnowledge(MAHNOBRegressionTrainer):
             if 'eeg_psd' in X:
                 inputs = X['eeg_psd'].to(self.device)
 
-            if train_mode:
-                knowledges = X['knowledge'].to(self.device)
+
+            knowledges = X['knowledge'].to(self.device)
 
             labels = torch.squeeze(Y.float().to(self.device), dim=2)
 
@@ -347,13 +348,17 @@ class MAHNOBRegressionTrainerLoadKnowledge(MAHNOBRegressionTrainer):
                                                                  sessions)
             continuous_label_handler.place_clip_output_to_subjectwise_dict(
                 labels.detach().cpu().numpy()[:, :, np.newaxis], absolute_indices, sessions)
-            loss_ccc = self.criterion['ccc'](outputs, labels.unsqueeze(2)) * outputs.size(0)
+
+            loss_ccc = self.criterion['ccc'](outputs, labels.unsqueeze(2))
 
             if train_mode:
                 loss_kd = self.criterion['kd'](knowledges, features['temporal']) * self.kd_weight
-                loss = loss_ccc + loss_kd
+                loss = self.ccc_weight * loss_ccc + loss_kd
+                # loss = loss_ccc
             else:
-                loss = loss_ccc
+                loss_kd = self.criterion['kd'](knowledges, features['temporal']) * self.kd_weight
+                loss = self.ccc_weight * loss_ccc + loss_kd
+                # loss = loss_ccc
 
             running_loss += loss.mean().item()
 

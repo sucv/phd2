@@ -16,7 +16,7 @@ if __name__ == '__main__':
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0,1,2,3,4,5,6,7,8,9],
+    parser.add_argument('-folds_to_run', default=[1,2,3,4,5,6,7,8,9],
                         nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,

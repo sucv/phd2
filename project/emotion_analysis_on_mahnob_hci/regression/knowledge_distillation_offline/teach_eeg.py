@@ -8,7 +8,7 @@ from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_of
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import \
     ParamControl
 
-from base.loss_function import CCCLoss, SoftTarget, CC, Hint
+from base.loss_function import CCCLoss, SoftTarget, CC, L1, L2, L1S
 
 import os
 from operator import itemgetter
@@ -20,7 +20,7 @@ from torch.utils import data
 
 
 class TeacherEEG1D(GenericExperiment):
-    def __init__(self, args):
+    def __init__(self, args, ccc_weight=None, kd_weight=None):
         super().__init__(args)
 
         self.num_folds = args.num_folds
@@ -29,13 +29,23 @@ class TeacherEEG1D(GenericExperiment):
 
         self.stamp = args.stamp
 
-        self.kd_weight = args.kd_weight
+        self.ccc_weight = ccc_weight
+        if ccc_weight is None:
+            self.ccc_weight = args.ccc_weight
+
+        self.kd_weight = kd_weight
+        if kd_weight is None:
+            self.kd_weight = args.kd_weight
+
         self.kd_loss_function = args.kd_loss_function
         self.kl_div_T = args.kl_div_T
 
         self.modality = args.modality
         self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[
-            0] + "_" + self.stamp + "_kd_weight_" + str(self.kd_weight) + "_" + self.kd_loss_function + "_" + str(self.kl_div_T)
+            0] + "_" + self.stamp + "_ccc_weight_" + str(self.ccc_weight) + "_kd_weight_" + str(
+            self.kd_weight) + "_" + self.kd_loss_function + "_" + str(
+            self.kl_div_T)
+
         self.backbone_state_dict_frame = args.backbone_state_dict_frame
         self.backbone_state_dict_eeg = args.backbone_state_dict_eeg
         self.backbone_mode = args.backbone_mode
@@ -151,11 +161,12 @@ class TeacherEEG1D(GenericExperiment):
         subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
         print(subject_id_of_all_folds)
 
-
-        if self.kd_loss_function == "mse":
-            criterion = {'ccc': CCCLoss(), 'kd': Hint()}
-        elif self.kd_loss_function == "kl_div":
-            criterion = {'ccc': CCCLoss(), 'kd': SoftTarget(self.kl_div_T)}
+        if self.kd_loss_function == "l1":
+            criterion = {'ccc': CCCLoss(), 'kd': L1()}
+        elif self.kd_loss_function == "l2":
+            criterion = {'ccc': CCCLoss(), 'kd': L2()}
+        elif self.kd_loss_function == "l1s":
+            criterion = {'ccc': CCCLoss(), 'kd': L1S()}
         else:
             raise ValueError("Unsupported loss function!")
 
@@ -173,7 +184,7 @@ class TeacherEEG1D(GenericExperiment):
             dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
 
             trainer = MAHNOBRegressionTrainerLoadKnowledge(model, stamp=self.stamp, model_name=self.model_name,
-                                                           learning_rate=self.learning_rate, kd_weight=self.kd_weight,
+                                                           learning_rate=self.learning_rate, kd_weight=self.kd_weight, ccc_weight=self.ccc_weight,
                                                            min_learning_rate=self.min_learning_rate,
                                                            metrics=self.metrics,
                                                            save_path=fold_save_path, early_stopping=self.early_stopping,

@@ -87,8 +87,7 @@ class Experiment(GenericExperiment):
 
     def create_model(self):
 
-        torch.manual_seed(0)
-        torch.cuda.manual_seed(0)
+        self.init_random_seed()
 
         output_dim = 1
         if "eeg_image" in self.modality:
@@ -143,7 +142,7 @@ class Experiment(GenericExperiment):
 
         # Set the fold-to-partition configuration.
         # Each fold have approximately the same number of sessions.
-
+        self.init_random_seed()
         partition_dictionary = self.init_partition_dictionary()
 
         fold_index = np.roll(np.arange(self.num_folds), fold)

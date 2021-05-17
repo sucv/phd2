@@ -7,33 +7,41 @@ import sys
 import argparse
 
 
-def csv_generator(path_to_read_result, num_folds=10):
+def csv_generator(path_to_read_result, num_folds=10, **kwargs):
 
     fold_wise_csv_filename = "training_logs.csv"
     csv_filename = os.path.join(path_to_read_result, "result.csv")
+
     num_folds = num_folds
     metrics = ["rmse", "pcc", "ccc"]
     validate_result = np.zeros((len(metrics), num_folds + 2))
     test_result = np.zeros((len(metrics), num_folds + 2))
 
-
     for path in Path(path_to_read_result).rglob(fold_wise_csv_filename):
-        fold = int(path.parts[6])
+        fold = int(path.parts[-2])
 
-
+        print(path)
         df = pd.read_csv(path, skiprows=4)
         last_row = df.iloc[-1, :]
 
-        best_epoch = df["best_epoch"].iloc[-2]
+        best_epoch = str(df["best_epoch"].iloc[-2])
         result_of_best_epoch = df.loc[df['epoch'] == best_epoch]
 
-        test_rmse = float(ast.literal_eval(last_row.iloc[2])[0])
-        test_pcc = float(last_row.iloc[4])
-        test_ccc = float(ast.literal_eval(last_row.iloc[7])[0])
+        # test_rmse = float(ast.literal_eval(last_row.iloc[2])[0])
+        # test_pcc = float(last_row.iloc[4])
+        # test_ccc = float(ast.literal_eval(last_row.iloc[7])[0])
+        #
+        # val_rmse = float(ast.literal_eval(result_of_best_epoch["val_rmse_v"].values[0])[0])
+        # val_pcc = result_of_best_epoch["val_pcc_v_v"].values[0]
+        # val_ccc = float(ast.literal_eval(result_of_best_epoch["val_ccc_v"].values[0])[0])
 
-        val_rmse = float(ast.literal_eval(result_of_best_epoch["val_rmse_v"].values[0])[0])
+        test_rmse = float(last_row.iloc[2])
+        test_pcc = float(last_row.iloc[4])
+        test_ccc = float(last_row.iloc[7])
+
+        val_rmse = float(result_of_best_epoch["val_rmse_v"].values[0])
         val_pcc = result_of_best_epoch["val_pcc_v_v"].values[0]
-        val_ccc = float(ast.literal_eval(result_of_best_epoch["val_ccc_v"].values[0])[0])
+        val_ccc = float(result_of_best_epoch["val_ccc_v"].values[0])
 
         test_result[0, fold] = test_rmse
         test_result[1, fold] = test_pcc
@@ -59,7 +67,9 @@ def csv_generator(path_to_read_result, num_folds=10):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Say hello')
-    parser.add_argument('-path_to_read_result', default='/home/zhangsu/phd2/save/emotion_video_1d_only_reg_v_eeg_psd_bs_2', type=str,
-                            help='The root directory of the dataset.')
+    parser.add_argument(
+        '-path_to_read_result',
+        default='/home/zhangsu/phd2/save/emotion_video_1d_only_reg_v_eeg_psd_test_bug',
+        type=str, help='The root directory of the dataset.')
     args = parser.parse_args()
     csv_generator(args.path_to_read_result)
