@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=2, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='trial_no_x', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='subind', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
-    from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg_trial import TeacherEEG1D
+    from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg import TeacherEEG1D
 
     experiment_handler = TeacherEEG1D(args)
     experiment_handler.experiment()
