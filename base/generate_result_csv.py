@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument(
         '-path_to_read_result',
-        default='/home/zhangsu/phd2/save/emotion_video_1d_only_reg_v_eeg_psd_test_bug',
+        default='/home/zhangsu/phd2/save/emotion_video_1d_only_reg_v_eeg_psd_confirm_128x2_1e4_subind',
         type=str, help='The root directory of the dataset.')
     args = parser.parse_args()
     csv_generator(args.path_to_read_result)

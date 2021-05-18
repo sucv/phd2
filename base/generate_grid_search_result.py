@@ -3,17 +3,17 @@ from xlsxwriter.workbook import Workbook
 import os
 import pandas as pd
 
-path_template = "/home/zhangsu/phd2/save/group_emo_kd_subind_1d_only_reg_v_eeg_psd_grid_ccc_weight_{arg1}_kd_weight_{arg2:.1f}_{arg3:s}_1"
+path_template = "/home/zhangsu/phd2/save/colab_subind/colab_emo_kd_1d_only_reg_v_eeg_psd_grid_ccc_weight_{arg1}_kd_weight_{arg2:.1f}_{arg3:s}_1"
 
 # arg1s = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05]
 # arg1s = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
-arg1s = [0.005, 0.01, 0.015, 0.02, 0.03, 0.035, 0.04, 0.055, 0.06, 0.065, 0.07, 0.075, 0.08, 0.085]
-arg2s = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+arg1s = [0.055, 0.06, 0.065, 0.07, 0.075, 0.08]
+arg2s = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 arg3s = ["l1"]
 
 multi_index_list = []
 
-overall_xls_path = "/home/zhangsu/phd2/save/overall_result.xlsx"
+overall_xls_path = "/home/zhangsu/phd2/save/overall_result_colab_subind.xlsx"
 writer = pd.ExcelWriter(overall_xls_path, engine='xlsxwriter')
 
 num_rows = 11

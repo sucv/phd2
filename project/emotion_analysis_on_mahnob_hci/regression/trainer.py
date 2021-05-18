@@ -278,8 +278,7 @@ class MAHNOBRegressionTrainer(GenericTrainer):
                                                                  sessions)
             continuous_label_handler.place_clip_output_to_subjectwise_dict(
                 labels.detach().cpu().numpy()[:, :, np.newaxis], absolute_indices, sessions)
-
-            loss = self.criterion(outputs, labels.unsqueeze(2))
+            loss = self.criterion(outputs, labels.unsqueeze(2)) * outputs.size(0)
 
             running_loss += loss.mean().item()
 
@@ -613,7 +612,6 @@ class MAHNOBRegressionTrainerTrial(GenericTrainer):
 
             # Determine the weight for loss function
             if train_mode:
-                loss_weights = torch.ones([labels.shape[0], labels.shape[1], 1]).to(self.device)
                 self.optimizer.zero_grad()
 
             outputs, _ = self.model(inputs)

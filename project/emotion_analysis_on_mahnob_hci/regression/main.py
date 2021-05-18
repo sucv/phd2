@@ -10,9 +10,9 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='before_paper_subind', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='loso', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
+    parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
@@ -29,13 +29,13 @@ if __name__ == '__main__':
 
     parser.add_argument('-normalize_eeg_raw', default=0, type=int, help='Whether to normalize eeg raw data?')
     # Models
-    parser.add_argument('-model_name', default="1d_only", help='Model: 2d1d, 2dlstm, eegnet1d, eegnetlstm, 1d_only, lstm_only')
+    parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm, eegnet1d, eegnetlstm, 1d_only, lstm_only')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v", help='The filename for the backbone state dict.')
-    parser.add_argument('-cnn1d_embedding_dim', default=192, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
-    parser.add_argument('-cnn1d_channels', default=[128, 128], nargs="+", type=int, help='The specific epochs to do something.')
-    parser.add_argument('-cnn1d_kernel_size', default=3, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
+    parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
+    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
+    parser.add_argument('-cnn1d_kernel_size', default=5, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 
     parser.add_argument('-lstm_embedding_dim', default=256, type=int, help='Dimensions for LSTM feature vectors.')
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
-    parser.add_argument('-gradual_release', default=0, type=int, help='Whether to gradually release some layers?')
+    parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=2, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[], nargs="+", type=int, help='The specific epochs to do something.')
     parser.add_argument('-load_best_at_each_epoch', default=1, type=int, help='Whether to load the best model state at the end of each epoch?')
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
-    from project.emotion_analysis_on_mahnob_hci.regression.experiment import Experiment
+    from project.emotion_analysis_on_mahnob_hci.regression.experiment_LOSO import Experiment
 
     experiment_handler = Experiment(args)
     experiment_handler.experiment()

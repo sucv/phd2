@@ -206,6 +206,7 @@ class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
 
         return subject_id_of_all_partitions
 
+
 class NFoldMahnobArranger(VideoEmoRegressionArranger):
     r"""
     A class to prepare files according to the n-fold manner.
@@ -489,6 +490,242 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
         return subject_id_of_all_partitions
 
+
+class NFoldMahnobArrangerLOSO(VideoEmoRegressionArranger):
+    r"""
+    A class to prepare files according to the n-fold manner.
+    """
+
+    def __init__(self, dataset_load_path, dataset_folder, modality, normalize_eeg_raw=True, num_electrodes=32, window_sec=24, hop_size_sec=8, continuous_label_frequency=4, include_session_having_no_continuous_label=True, feature_extraction=False):
+
+        # The root directory of the dataset.
+        super().__init__(dataset_load_path=dataset_load_path, dataset_folder=dataset_folder)
+
+        # Load the dataset information
+        self.dataset_info = self.get_dataset_info()
+
+        self.num_electrodes = num_electrodes
+        self.normalize_eeg_raw = normalize_eeg_raw
+
+        # Regression or Classification?
+        self.include_session_having_no_continuous_label = include_session_having_no_continuous_label
+
+        self.depth = window_sec * continuous_label_frequency
+        self.step_size = hop_size_sec * continuous_label_frequency
+
+        # Frame, EEG, which one or both?
+        self.modality = modality
+        self.get_modality_list()
+
+        # Get the sessions having continuous labels.
+        self.sessions_having_continuous_label = self.get_session_indices_having_continuous_label()
+        self.feature_extraction = feature_extraction
+
+    def get_modality_list(self):
+
+        # if self.job == "reg_v":
+        self.modality.append("continuous_label")
+
+    def get_session_indices_having_continuous_label(self):
+        r"""
+        Get the session indices having continuous labels.
+        :return: (list), the indices indicating which sessions have continuous labels.
+        """
+        if self.include_session_having_no_continuous_label:
+            indices = np.where(np.asarray(self.dataset_info['having_eeg']) == 1)[0]
+        else:
+            indices = np.where(self.dataset_info['having_continuous_label'] == 1)[0]
+        return indices
+
+    def make_data_dict(self, trial_id_of_all_partitions):
+
+        # Initialize the dictionary to be outputed.
+        data_dict = {key: [] for key in trial_id_of_all_partitions}
+        length_dict = {key: [] for key in trial_id_of_all_partitions}
+        normalize_dict = {key: {} for key in trial_id_of_all_partitions}
+
+        for partition, trial_id_of_a_partition in trial_id_of_all_partitions.items():
+
+            data_of_a_partition = []
+            length_of_a_partition = []
+            if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                trial_wise_eeg_mean_cache = np.zeros((self.num_electrodes,))
+                trial_wise_eeg_std_cache = np.zeros((self.num_electrodes,))
+                num_samples = 0
+                eeg_raw_path_list = []
+
+            trial_indices = trial_id_of_a_partition
+
+            length_list = list(itemgetter(*trial_indices)(self.dataset_info['refined_processed_length']))
+            trial_name_list = list(itemgetter(*trial_indices)(self.dataset_info['session_name']))
+            directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
+                              session_name in trial_name_list]
+
+            for i in range(len(trial_indices)):
+                trial_name = trial_name_list[i]
+                length = length_list[i]
+                trial_directory = directory_list[i]
+
+                if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                    eeg_raw_path = os.path.join(trial_directory, "eeg_raw.npy")
+                    intermediate = np.load(eeg_raw_path)
+                    num_samples += intermediate.shape[0]
+                    trial_wise_eeg_mean_cache += np.sum(intermediate, axis=0)
+                    eeg_raw_path_list.append(eeg_raw_path)
+
+                if self.feature_extraction:
+                    depth = length
+                else:
+                    depth = self.depth
+
+                start = 0
+                end = start + depth
+
+                while end <= length:
+                    relative_indices = np.arange(start, end)
+                    data_of_a_partition.append([trial_directory, relative_indices, length, trial_name])
+                    start += self.step_size
+                    end = start + depth
+
+                if (length - depth) % self.step_size != 0:
+                    start = length - depth
+                    end = length
+                    relative_indices = np.arange(start, end)
+                    data_of_a_partition.append([trial_directory, relative_indices, length, trial_name])
+
+            data_dict[partition].extend(data_of_a_partition)
+
+            if "eeg_raw" in self.modality and self.normalize_eeg_raw:
+                eeg_raw_mean = trial_wise_eeg_mean_cache / num_samples
+
+                for eeg_raw_path in eeg_raw_path_list:
+                    trial_wise_eeg_std_cache += np.sum(np.square(np.load(eeg_raw_path) - eeg_raw_mean), axis=0)
+
+                eeg_raw_std = np.sqrt(trial_wise_eeg_std_cache / num_samples)
+                normalize_dict[partition]['mean'] = eeg_raw_mean
+                normalize_dict[partition]['std'] = eeg_raw_std
+
+        return data_dict, normalize_dict
+
+    def get_session_index(self, subject_id):
+        indices = list(np.intersect1d(np.where(self.dataset_info['subject_id'] == subject_id)[0],
+                                      self.sessions_having_continuous_label))
+        return indices
+
+    def get_subject_list_and_frequency(self):
+        r"""
+        Get the subject-wise session counts. It will be used for fold partition.
+        :return: (list), the session counts of each subject.
+        """
+        subject_list, trial_count = np.unique(
+            self.dataset_info['subject_id'][self.sessions_having_continuous_label], return_counts=True)
+        return subject_list, trial_count
+
+    def assign_session_to_subject(self):
+        r"""
+        Assign the sessions having continuous labels to its subjects.
+        :return: (list), the list recording the session id having continuous labels for each subject.
+        """
+        subject_list, trial_count_for_each_subject = self.get_subject_list_and_frequency()
+
+        session_id_of_each_subject = [
+            np.where(self.dataset_info['subject_id'][self.sessions_having_continuous_label] == subject_id)[0] for
+            _, subject_id in enumerate(subject_list)]
+        return session_id_of_each_subject
+
+    def assign_subject_to_fold(self, fold_number):
+        r"""
+        Assign the subjects and their sessions to a fold.
+        :param fold_number: (int), how many fold the partition will create.
+        :return: (list), the list recording the subject id and its associated session for each fold.
+        """
+
+        # Count the session number for each subject.
+        subject_list, trial_count_for_each_subject = self.get_subject_list_and_frequency()
+
+        # Calculate the expected session number for a fold, in order to partition it as evenly as possible.
+        expected_trial_number_in_a_fold = np.sum(trial_count_for_each_subject) / fold_number
+
+        # For preprocessing, or Leave One Subject Out scenario, which leaves one subject as a fold.
+        if fold_number >= len(subject_list):
+            expected_trial_number_in_a_fold = 0
+
+        # In order to evenly partition the fold, we employ a simple algorithm. For each unprocessed
+        # subjects, we always check if the current session number exceed the expected number. If
+        # not, then assign the subject with the currently smallest number of session to the
+        # current fold.
+
+        # The mask is used to indicate whether the subject is assigned.
+        mask = np.ones(len(subject_list), dtype=bool)
+
+        subject_id_of_all_folds = []
+
+        # Loop the subject.
+        for i, (subject, trial_count) in enumerate(zip(subject_list, trial_count_for_each_subject)):
+
+            # If the subject has not been assigned.
+            if mask[i]:
+
+                # Assign this subject to a new fold, then count the current session number,
+                # and set the mask of this subject to False showing that it is assigned.
+                one_fold = [subject]
+                current_trial_number_in_a_fold = trial_count_for_each_subject[i]
+                mask[i] = False
+
+                # If the current session number is fewer than 90% of the expected number,
+                # and there are still subjects that are not assigned.
+                while (current_trial_number_in_a_fold <
+                       expected_trial_number_in_a_fold * 0.9 and True in mask):
+                    # Find the unassigned subject having the smallest session number currently.
+                    trial_count_to_check = trial_count_for_each_subject[mask]
+                    current_min_remaining = min(trial_count_to_check)
+
+                    # Sometimes there are multiple subjects having the smallest number of session.
+                    # If so, pick the first one to assign.
+                    index_of_current_min = [j for j, count in
+                                            enumerate(trial_count_for_each_subject)
+                                            if (mask[j] and current_min_remaining == count)][0]
+
+                    # Assign the subject to the fold.
+                    one_fold.append(subject_list[index_of_current_min])
+
+                    # Update the current count and mask.
+                    current_trial_number_in_a_fold += current_min_remaining
+                    mask[index_of_current_min] = False
+
+                # Append the subjects of one fold to the final list.
+                subject_id_of_all_folds.append(one_fold)
+
+        # For Leave-one-subject-out scenario:
+        # Also output the session id of all folds for convenience.
+        trial_id_of_all_folds = {subject_id_of_one_fold[0]: np.hstack([self.sessions_having_continuous_label[np.where(
+            self.dataset_info['subject_id'][self.sessions_having_continuous_label] == subject_id)[0]]
+                                              for subject_id in subject_id_of_one_fold])
+                                   for subject_id_of_one_fold in subject_id_of_all_folds}
+
+        return subject_id_of_all_folds, trial_id_of_all_folds
+
+    @staticmethod
+    def partition_train_validate_test_for_subjects(subject_id_of_all_folds, partition_dictionary):
+        r"""
+        A static function to assign the subjects to folds according to the partition dictionary.
+        :param subject_id_of_all_folds: (list), the list recording the subject id of all folds.
+        :param partition_dictionary: (dict), the dictionary indicating the fold numbers of each partition.
+        :return: (dict), the dictionary indicating the subject ids of each partition.
+        """
+
+        # To assure that the fold number equals the value sum of the partition dictionary.
+        assert len(subject_id_of_all_folds) == np.sum([value for value in partition_dictionary.values()])
+
+        # Assign the subject id according to the dictionary.
+        subject_id_of_all_partitions = {
+            'train': subject_id_of_all_folds[0:partition_dictionary['train']],
+            'validate': subject_id_of_all_folds[partition_dictionary['train']:
+                                                partition_dictionary['train'] + partition_dictionary['validate']],
+            'test': subject_id_of_all_folds[-partition_dictionary['test']:]
+        }
+
+        return subject_id_of_all_partitions
 
 class MAHNOBDatasetCls(Dataset):
     def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'],
