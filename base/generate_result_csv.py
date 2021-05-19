@@ -27,21 +27,21 @@ def csv_generator(path_to_read_result, num_folds=10, **kwargs):
         best_epoch = str(df["best_epoch"].iloc[-2])
         result_of_best_epoch = df.loc[df['epoch'] == best_epoch]
 
-        # test_rmse = float(ast.literal_eval(last_row.iloc[2])[0])
-        # test_pcc = float(last_row.iloc[4])
-        # test_ccc = float(ast.literal_eval(last_row.iloc[7])[0])
-        #
-        # val_rmse = float(ast.literal_eval(result_of_best_epoch["val_rmse_v"].values[0])[0])
-        # val_pcc = result_of_best_epoch["val_pcc_v_v"].values[0]
-        # val_ccc = float(ast.literal_eval(result_of_best_epoch["val_ccc_v"].values[0])[0])
-
-        test_rmse = float(last_row.iloc[2])
+        test_rmse = float(ast.literal_eval(last_row.iloc[2])[0])
         test_pcc = float(last_row.iloc[4])
-        test_ccc = float(last_row.iloc[7])
+        test_ccc = float(ast.literal_eval(last_row.iloc[7])[0])
 
-        val_rmse = float(result_of_best_epoch["val_rmse_v"].values[0])
+        val_rmse = float(ast.literal_eval(result_of_best_epoch["val_rmse_v"].values[0])[0])
         val_pcc = result_of_best_epoch["val_pcc_v_v"].values[0]
-        val_ccc = float(result_of_best_epoch["val_ccc_v"].values[0])
+        val_ccc = float(ast.literal_eval(result_of_best_epoch["val_ccc_v"].values[0])[0])
+
+        # test_rmse = float(last_row.iloc[2])
+        # test_pcc = float(last_row.iloc[4])
+        # test_ccc = float(last_row.iloc[7])
+        #
+        # val_rmse = float(result_of_best_epoch["val_rmse_v"].values[0])
+        # val_pcc = result_of_best_epoch["val_pcc_v_v"].values[0]
+        # val_ccc = float(result_of_best_epoch["val_ccc_v"].values[0])
 
         test_result[0, fold] = test_rmse
         test_result[1, fold] = test_pcc
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument(
         '-path_to_read_result',
-        default='/home/zhangsu/phd2/save/emotion_video_1d_only_reg_v_eeg_psd_confirm_128x2_1e4_subind',
+        default='/home/zhangsu/phd2/save/emotion_video_1d_only_reg_v_eeg_psd_confirm_128x4_2',
         type=str, help='The root directory of the dataset.')
     args = parser.parse_args()
     csv_generator(args.path_to_read_result)

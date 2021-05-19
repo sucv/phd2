@@ -1,14 +1,14 @@
 from base.experiment import GenericExperiment
 from models.model import my_2d1d, my_2dlstm
 from models.knowledge_distillation_model import kd_2d1d, kd_res50
-from base.dataset import NFoldMahnobArrangerTrial, MAHNOBDatasetTrial
+from base.dataset import NFoldMahnobArrangerLOSO, MAHNOBDatasetTrial
 from base.checkpointer import ClassificationCheckpointer as Checkpointer
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.trainer import \
     MAHNOBFeatureExtractorTrainerTrial
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import \
     ParamControl
 
-from base.loss_function import CCCLoss, SoftTarget, CC, Hint
+from base.loss_function import CCCLoss, SoftTarget, CC
 
 import os
 from operator import itemgetter
@@ -17,9 +17,10 @@ import numpy as np
 import torch
 import torch.nn
 from torch.utils import data
+import random
 
 
-class KnowledgeExtractorTrial(GenericExperiment):
+class KnowledgeExtractor(GenericExperiment):
     def __init__(self, args):
         super().__init__(args)
 
@@ -85,21 +86,44 @@ class KnowledgeExtractorTrial(GenericExperiment):
 
         return teacher
 
-    def init_partition_setting(self):
-        partition_setting = {'train': 239}
-        return partition_setting
+    def init_partition_dictionary(self):
+        partition_dictionary = {'train': 23, 'validate': 0, 'test': 1}
+        return partition_dictionary
 
-    def init_dataloader(self, partition_setting, trial_id_of_all_folds, fold_arranger, fold, class_labels=None):
+    def combine_trial_for_partition(self, subject_id_of_all_folds, trial_id_to_subject_dict):
+        subject_id_of_non_test_subjects = [subject[0] for subject in subject_id_of_all_folds[:-1]]
+        subject_id_of_the_test_subject = subject_id_of_all_folds[-1]
+
+        trial_id_of_non_test_subjects, trial_id_of_the_test_subject = [], []
+        [trial_id_of_non_test_subjects.extend(trial_id_to_subject_dict[subject]) for subject in subject_id_of_non_test_subjects]
+        [trial_id_of_the_test_subject.extend(trial_id_to_subject_dict[subject]) for subject in subject_id_of_the_test_subject]
+
+        random.shuffle(trial_id_of_non_test_subjects)
+
+        train_validate_length = len(trial_id_of_non_test_subjects)
+
+        train_length = int(train_validate_length * 0.8)
+
+        trial_id_of_all_partitions = {'train': trial_id_of_non_test_subjects[:train_length], 'validate': trial_id_of_non_test_subjects[train_length:], 'test': trial_id_of_the_test_subject}
+
+        return trial_id_of_all_partitions
+
+    def init_dataloader(self, subject_id_of_all_folds, trial_id_to_subject_dict, fold_arranger, fold,
+                        class_labels=None):
 
         # Set the fold-to-partition configuration.
         # Each fold have approximately the same number of sessions.
+        self.init_random_seed()
+        partition_dictionary = self.init_partition_dictionary()
 
-        trial_index = np.roll(trial_id_of_all_folds, 24 * fold)
-        trial_id_of_all_partitions = fold_arranger.assign_trial_to_partition(trial_index)
+        fold_index = np.roll(np.arange(len(subject_id_of_all_folds)), fold)
+        subject_id_of_all_folds = list(itemgetter(*fold_index)(subject_id_of_all_folds))
+        trial_id_of_all_partitions = self.combine_trial_for_partition(subject_id_of_all_folds, trial_id_to_subject_dict)
         data_dict, normalize_dict = fold_arranger.make_data_dict(trial_id_of_all_partitions)
+        print(subject_id_of_all_folds)
 
         dataloaders_dict = {}
-        for partition in partition_setting.keys():
+        for partition in partition_dictionary.keys():
             dataset = MAHNOBDatasetTrial(self.config['generic_config'], data_dict[partition], normalize_dict=normalize_dict,
                                          modality=self.modality, feature_extraction=True,
                                          continuous_label_frequency=self.config['generic_config']['frequency_dict']['continuous_label'],
@@ -109,7 +133,7 @@ class KnowledgeExtractorTrial(GenericExperiment):
                                          eegnet_stride_sec=0.25,
                                          time_delay=self.time_delay, class_labels=class_labels, mode=partition)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
-                dataset=dataset, batch_size=1, shuffle=False)
+                dataset=dataset, batch_size=self.batch_size, shuffle=False)
 
         return dataloaders_dict, normalize_dict
 
@@ -117,20 +141,15 @@ class KnowledgeExtractorTrial(GenericExperiment):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
 
-        partition_setting = self.init_partition_setting()
-
-        fold_arranger = NFoldMahnobArrangerTrial(dataset_load_path=self.dataset_load_path,
-                                                 normalize_eeg_raw=0, feature_extraction=True,
-                                                 dataset_folder=self.dataset_folder, window_sec=24,
-                                                 hop_size_sec=8, partition_setting=partition_setting,
-                                                 include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
-                                                 modality=self.modality)
-
-        trial_id_of_all_partitions = fold_arranger.get_trial_indices_having_continuous_label()
-
-        criterion = {'hint': Hint()}
-
+        fold_arranger = NFoldMahnobArrangerLOSO(dataset_load_path=self.dataset_load_path, normalize_eeg_raw=0,
+                                            dataset_folder=self.dataset_folder, window_sec=24, hop_size_sec=8,
+                                            include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
+                                            modality=self.modality, feature_extraction=True)
+        subject_id_of_all_folds, trial_id_to_subject_dict = fold_arranger.assign_subject_to_fold(self.num_folds)
+        print(subject_id_of_all_folds)
         model = self.create_model()
+
+        criterion = {}
 
         # Here goes the N-fold training.
         for fold in iter(self.folds_to_run):
@@ -142,18 +161,19 @@ class KnowledgeExtractorTrial(GenericExperiment):
             checkpoint_filename = os.path.join(fold_save_path, "checkpoint.pkl")
 
             model.init(fold)
-            dataloaders_dict, normalize_dict = self.init_dataloader(partition_setting, trial_id_of_all_partitions,
-                                                                    fold_arranger, fold)
+            dataloaders_dict, normalize_dict = self.init_dataloader(subject_id_of_all_folds, trial_id_to_subject_dict, fold_arranger, fold)
 
             trainer = MAHNOBFeatureExtractorTrainerTrial(model, model_name=self.model_name,
                                                          save_path=fold_save_path, criterion=criterion, num_classes=8,
                                                          device=self.device, )
 
             feature_save_path = os.path.join(self.model_load_path, self.model_name,
-                                             self.config['kd_config']['2d1d']['teacher_knowledge_save_folder'] + "_trial",
+                                             self.config['kd_config']['2d1d']['teacher_knowledge_save_folder'] + "_loso",
                                              str(fold))
 
             trainer.validate(dataloaders_dict['train'], feature_save_path=feature_save_path)
+
+            trainer.validate(dataloaders_dict['validate'], feature_save_path=feature_save_path)
 
 
 import sys
@@ -165,7 +185,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="emo_kd", help='The experiment name.')
-    parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
     parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
@@ -173,8 +193,8 @@ if __name__ == '__main__':
     parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
-    parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-num_folds', default=24, type=int, help="How many folds to consider?")
+    parser.add_argument('-folds_to_run', default=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
@@ -223,7 +243,7 @@ if __name__ == '__main__':
                         help='The frequency of the continuous label.')
     parser.add_argument('-frame_size', default=frame_size, type=int, help='The size of the images.')
     parser.add_argument('-crop_size', default=crop_size, type=int, help='The size to conduct the cropping.')
-    parser.add_argument('-batch_size', default=2, type=int)
+    parser.add_argument('-batch_size', default=1, type=int)
 
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
@@ -237,5 +257,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
 
-    experiment_handler = KnowledgeExtractorTrial(args)
+    experiment_handler = KnowledgeExtractor(args)
     experiment_handler.experiment()

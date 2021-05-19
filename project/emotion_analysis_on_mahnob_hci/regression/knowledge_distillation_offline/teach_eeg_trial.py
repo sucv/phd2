@@ -3,7 +3,8 @@ from models.model import my_2d1d, my_2dlstm, my_temporal, my_test
 from models.knowledge_distillation_model import kd_2d1d, kd_res50
 from base.dataset import NFoldMahnobArrangerTrial, MAHNOBDatasetTrial
 from project.emotion_analysis_on_mahnob_hci.regression.checkpointer import Checkpointer
-from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.trainer import MAHNOBRegressionTrainerLoadKnowledgeTrial
+from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.trainer import \
+    MAHNOBRegressionTrainerLoadKnowledgeTrial
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import \
     ParamControl
 
@@ -25,7 +26,7 @@ class TeacherEEG1D(GenericExperiment):
         self.num_folds = args.num_folds
         self.folds_to_run = args.folds_to_run
         self.include_session_having_no_continuous_label = 0
-
+        self.case = args.case
         self.stamp = args.stamp
 
         self.ccc_weight = ccc_weight
@@ -41,13 +42,14 @@ class TeacherEEG1D(GenericExperiment):
 
         self.modality = args.modality
         self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[
-            0] + "_" + self.stamp + "_ccc_weight_" + str(self.ccc_weight) + "_kd_weight_" + str(self.kd_weight) + "_" + self.kd_loss_function + "_" + str(
+            0] + "_" + self.stamp + "_ccc_weight_" + str(self.ccc_weight) + "_kd_weight_" + str(
+            self.kd_weight) + "_" + self.kd_loss_function + "_" + str(
             self.kl_div_T)
         self.backbone_state_dict_frame = args.backbone_state_dict_frame
         self.backbone_state_dict_eeg = args.backbone_state_dict_eeg
         self.backbone_mode = args.backbone_mode
 
-        self.window_length = args.window_length
+        self.window_sec = args.window_sec
         self.hop_size = args.hop_size
         self.continuous_label_frequency = args.continuous_label_frequency
         self.frame_size = args.frame_size
@@ -82,7 +84,7 @@ class TeacherEEG1D(GenericExperiment):
         self.metrics = args.metrics
         self.save_plot = args.save_plot
 
-        self.knowledge_load_path = args.knowledge_load_path
+        self.knowledge_load_path = args.knowledge_load_path + "_trial"
         self.device = self.init_device()
 
     def load_config(self):
@@ -142,12 +144,13 @@ class TeacherEEG1D(GenericExperiment):
 
         partition_setting = self.init_partition_setting()
 
-        fold_arranger = NFoldMahnobArrangerTrial(dataset_load_path=self.dataset_load_path,
-                                                 dataset_folder=self.dataset_folder, partition_setting=partition_setting,
+        fold_arranger = NFoldMahnobArrangerTrial(dataset_load_path=self.dataset_load_path, window_sec=self.window_sec,
+                                                 hop_size_sec=self.hop_size,
+                                                 dataset_folder=self.dataset_folder,
+                                                 partition_setting=partition_setting,
                                                  include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
                                                  modality=self.modality)
         trial_id_of_all_partitions = fold_arranger.get_trial_indices_having_continuous_label()
-
 
         if self.kd_loss_function == "l1":
             criterion = {'ccc': CCCLoss(), 'kd': L1()}
@@ -173,15 +176,18 @@ class TeacherEEG1D(GenericExperiment):
                                                                     fold_arranger, fold)
 
             trainer = MAHNOBRegressionTrainerLoadKnowledgeTrial(model, stamp=self.stamp, model_name=self.model_name,
-                                                           learning_rate=self.learning_rate, kd_weight=self.kd_weight, ccc_weight = self.ccc_weight,
-                                                           min_learning_rate=self.min_learning_rate,
-                                                           metrics=self.metrics,
-                                                           save_path=fold_save_path, early_stopping=self.early_stopping,
-                                                           patience=self.patience, factor=self.factor,
-                                                           load_best_at_each_epoch=self.load_best_at_each_epoch,
-                                                           milestone=self.milestone, criterion=criterion, verbose=True,
-                                                           save_plot=self.save_plot,
-                                                           device=self.device)
+                                                                learning_rate=self.learning_rate,
+                                                                kd_weight=self.kd_weight, ccc_weight=self.ccc_weight,
+                                                                min_learning_rate=self.min_learning_rate,
+                                                                metrics=self.metrics,
+                                                                save_path=fold_save_path,
+                                                                early_stopping=self.early_stopping,
+                                                                patience=self.patience, factor=self.factor,
+                                                                load_best_at_each_epoch=self.load_best_at_each_epoch,
+                                                                milestone=self.milestone, criterion=criterion,
+                                                                verbose=True,
+                                                                save_plot=self.save_plot,
+                                                                device=self.device)
 
             parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
                                                 release_count=self.release_count, backbone_mode=self.backbone_mode)

@@ -26,9 +26,10 @@ class Experiment(GenericExperiment):
         self.include_session_having_no_continuous_label = 0
         self.normalize_eeg_raw = args.normalize_eeg_raw
         self.stamp = args.stamp
+        self.case = args.case
 
         self.modality = args.modality
-        self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[0] + "_" + self.stamp
+        self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[0] + "_" + self.case + "_" + self.stamp
         self.backbone_state_dict_frame = args.backbone_state_dict_frame
         self.backbone_state_dict_eeg = args.backbone_state_dict_eeg
         self.backbone_mode = args.backbone_mode
@@ -129,7 +130,7 @@ class Experiment(GenericExperiment):
         partition_dictionary = {'train': 23, 'validate': 0, 'test': 1}
         return partition_dictionary
 
-    def combine_trial_for_partition(self, subject_id_of_all_folds, partition_dictionary, trial_id_to_subject_dict):
+    def combine_trial_for_partition(self, subject_id_of_all_folds, trial_id_to_subject_dict):
         subject_id_of_non_test_subjects = [subject[0] for subject in subject_id_of_all_folds[:-1]]
         subject_id_of_the_test_subject = subject_id_of_all_folds[-1]
 
@@ -156,7 +157,7 @@ class Experiment(GenericExperiment):
 
         fold_index = np.roll(np.arange(len(subject_id_of_all_folds)), fold)
         subject_id_of_all_folds = list(itemgetter(*fold_index)(subject_id_of_all_folds))
-        trial_id_of_all_partitions = self.combine_trial_for_partition(subject_id_of_all_folds, partition_dictionary, trial_id_to_subject_dict)
+        trial_id_of_all_partitions = self.combine_trial_for_partition(subject_id_of_all_folds, trial_id_to_subject_dict)
         data_dict, normalize_dict = fold_arranger.make_data_dict(trial_id_of_all_partitions)
         print(subject_id_of_all_folds)
 
@@ -183,7 +184,7 @@ class Experiment(GenericExperiment):
         fold_arranger = NFoldMahnobArrangerLOSO(dataset_load_path=self.dataset_load_path, normalize_eeg_raw=self.normalize_eeg_raw,
                                             dataset_folder=self.dataset_folder, window_sec=self.window_sec, hop_size_sec=self.hop_size_sec,
                                             include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
-                                            modality=self.modality)
+                                            modality=self.modality, feature_extraction=False)
         subject_id_of_all_folds, trial_id_to_subject_dict = fold_arranger.assign_subject_to_fold(self.num_folds)
         print(subject_id_of_all_folds)
 

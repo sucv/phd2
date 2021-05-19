@@ -15,6 +15,9 @@ if __name__ == '__main__':
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
+    parser.add_argument('-case', default='loso', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
+                                                                'unit for shuffling is trial, subject, and subject for the three options, respectively.')
+
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
     parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int,
                         help='Which fold(s) to run in this session?')

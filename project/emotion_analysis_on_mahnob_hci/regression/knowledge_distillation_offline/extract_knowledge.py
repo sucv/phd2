@@ -153,7 +153,7 @@ class KnowledgeExtractor(GenericExperiment):
                                                     device=self.device, )
 
             feature_save_path = os.path.join(self.model_load_path, self.model_name,
-                                             self.config['kd_config']['2d1d']['teacher_knowledge_save_folder'],
+                                             self.config['kd_config']['2d1d']['teacher_knowledge_save_folder'] + "_sub_independent",
                                              str(fold))
 
             trainer.validate(dataloaders_dict['train'], lengths_dict['train'], feature_save_path=feature_save_path)

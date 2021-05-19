@@ -10,13 +10,16 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='loso', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='loso_128x2', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
-    parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
+    parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
+    parser.add_argument('-case', default='loso', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
+                                                                'unit for shuffling is trial, subject, and subject for the three options, respectively.')
+
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0,1,2,3,4,5,6,7,8,9], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[11], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
@@ -29,13 +32,13 @@ if __name__ == '__main__':
 
     parser.add_argument('-normalize_eeg_raw', default=0, type=int, help='Whether to normalize eeg raw data?')
     # Models
-    parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm, eegnet1d, eegnetlstm, 1d_only, lstm_only')
+    parser.add_argument('-model_name', default="1d_only", help='Model: 2d1d, 2dlstm, eegnet1d, eegnetlstm, 1d_only, lstm_only')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v", help='The filename for the backbone state dict.')
-    parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
-    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128], nargs="+", type=int, help='The specific epochs to do something.')
-    parser.add_argument('-cnn1d_kernel_size', default=5, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
+    parser.add_argument('-cnn1d_embedding_dim', default=192, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
+    parser.add_argument('-cnn1d_channels', default=[128, 128], nargs="+", type=int, help='The specific epochs to do something.')
+    parser.add_argument('-cnn1d_kernel_size', default=3, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 
     parser.add_argument('-lstm_embedding_dim', default=256, type=int, help='Dimensions for LSTM feature vectors.')
@@ -55,9 +58,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-psd_num_inputs', default=192, type=int, help='electrodes x interest bands')
 
-    parser.add_argument('-learning_rate', default=1e-5, type=float, help='The initial learning rate.')
+    parser.add_argument('-learning_rate', default=1e-4, type=float, help='The initial learning rate.')
     parser.add_argument('-min_learning_rate', default=1e-6, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=30, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-num_epochs', default=10, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-min_num_epochs', default=0, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-time_delay', default=0, type=float, help='The time delay between input and label, in seconds.')
     parser.add_argument('-early_stopping', default=20, type=int, help='If no improvement, the number of epoch to run before halting the training')
@@ -79,7 +82,7 @@ if __name__ == '__main__':
     # Scheduler and Parameter Control
     parser.add_argument('-patience', default=5, type=int, help='Patience for learning rate changes.')
     parser.add_argument('-factor', default=0.5, type=float, help='The multiplier to decrease the learning rate.')
-    parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
+    parser.add_argument('-gradual_release', default=0, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=2, type=int, help='How many layer groups to release?')
     parser.add_argument('-milestone', default=[], nargs="+", type=int, help='The specific epochs to do something.')
     parser.add_argument('-load_best_at_each_epoch', default=1, type=int, help='Whether to load the best model state at the end of each epoch?')
@@ -89,7 +92,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
-    from project.emotion_analysis_on_mahnob_hci.regression.experiment_LOSO import Experiment
+
+    if args.case == "trial":
+        from project.emotion_analysis_on_mahnob_hci.regression.experiment import Experiment
+    elif args.case == "sub_ind":
+        from project.emotion_analysis_on_mahnob_hci.regression.experiment_N_fold import Experiment
+    elif args.case == "loso":
+        from project.emotion_analysis_on_mahnob_hci.regression.experiment_LOSO import Experiment
+    else:
+        raise ValueError("Unknown data splitting rule!")
 
     experiment_handler = Experiment(args)
     experiment_handler.experiment()

@@ -15,6 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
+    parser.add_argument('-case', default='loso', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
+                                                                'unit for shuffling is trial, subject, and subject for the three options, respectively.')
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
     parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int,
                         help='Which fold(s) to run in this session?')
@@ -32,7 +34,7 @@ if __name__ == '__main__':
                         help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str,
                         help='The path to the entire repository.')
-    parser.add_argument('-knowledge_load_path', default='/home/zhangsu/phd2/load/emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame_sub_independent', type=str,
+    parser.add_argument('-knowledge_load_path', default='/home/zhangsu/phd2/load/emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame', type=str,
                         help='The path to the knowledge from teacher model.')
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
@@ -76,7 +78,7 @@ if __name__ == '__main__':
                         help='Whether to plot the session-wise output/target or not?')
 
     # Dataloader settings
-    parser.add_argument('-window_length', default=24, type=int, help='The length in second to windowing the data.')
+    parser.add_argument('-window_sec', default=24, type=int, help='The length in second to windowing the data.')
     parser.add_argument('-hop_size', default=8, type=int, help='The step size or stride to move the window.')
     parser.add_argument('-continuous_label_frequency', default=4, type=int,
                         help='The frequency of the continuous label.')
@@ -101,8 +103,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
-    from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg import \
-        TeacherEEG1D
+
+    if args.case == "trial":
+        from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg_trial import TeacherEEG1D
+    elif args.case == "sub_ind":
+        from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg import TeacherEEG1D
+    elif args.case == "loso":
+        from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.teach_eeg_LOSO import TeacherEEG1D
+    else:
+        raise ValueError("Unknown data splitting rule!")
 
     for ccc_weight in args.ccc_weights:
         for kd_weight in args.kd_weights:

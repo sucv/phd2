@@ -556,10 +556,16 @@ class NFoldMahnobArrangerLOSO(VideoEmoRegressionArranger):
 
             trial_indices = trial_id_of_a_partition
 
-            length_list = list(itemgetter(*trial_indices)(self.dataset_info['refined_processed_length']))
-            trial_name_list = list(itemgetter(*trial_indices)(self.dataset_info['session_name']))
-            directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
-                              session_name in trial_name_list]
+            if len(trial_indices) == 1:
+                length_list = [self.dataset_info['refined_processed_length'][trial_indices[0]]]
+                trial_name_list = [self.dataset_info['session_name'][trial_indices[0]]]
+                directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
+                                  session_name in trial_name_list]
+            else:
+                length_list = list(itemgetter(*trial_indices)(self.dataset_info['refined_processed_length']))
+                trial_name_list = list(itemgetter(*trial_indices)(self.dataset_info['session_name']))
+                directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
+                                  session_name in trial_name_list]
 
             for i in range(len(trial_indices)):
                 trial_name = trial_name_list[i]

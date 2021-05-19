@@ -1,10 +1,10 @@
 from base.experiment import GenericExperiment
 from models.model import my_2d1d, my_2dlstm, my_temporal
 from models.knowledge_distillation_model import kd_2d1d, kd_res50
-from base.dataset import NFoldMahnobArranger, MAHNOBDataset
+from base.dataset import NFoldMahnobArrangerLOSO, MAHNOBDatasetTrial
 from project.emotion_analysis_on_mahnob_hci.regression.checkpointer import Checkpointer
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.trainer import \
-    MAHNOBRegressionTrainerLoadKnowledge
+    MAHNOBRegressionTrainerLoadKnowledgeTrial
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import \
     ParamControl
 
@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torch.nn
 from torch.utils import data
+import random
 
 
 class TeacherEEG1D(GenericExperiment):
@@ -85,7 +86,8 @@ class TeacherEEG1D(GenericExperiment):
         self.metrics = args.metrics
         self.save_plot = args.save_plot
 
-        self.knowledge_load_path = args.knowledge_load_path + "_sub_independent"
+        self.knowledge_load_path = args.knowledge_load_path + "_loso"
+
         self.device = self.init_device()
 
     def load_config(self):
@@ -113,52 +115,69 @@ class TeacherEEG1D(GenericExperiment):
         return student
 
     def init_partition_dictionary(self):
-        if self.num_folds == 3:
-            partition_dictionary = {'train': 1, 'validate': 1, 'test': 1}
-        elif self.num_folds == 5:
-            partition_dictionary = {'train': 3, 'validate': 1, 'test': 1}
-        elif self.num_folds == 9:
-            partition_dictionary = {'train': 6, 'validate': 2, 'test': 1}
-        elif self.num_folds == 10:
-            partition_dictionary = {'train': 7, 'validate': 2, 'test': 1}
-        else:
-            raise ValueError("The fold number is not supported or realistic!")
-
+        partition_dictionary = {'train': 23, 'validate': 0, 'test': 1}
         return partition_dictionary
 
-    def init_dataloader(self, subject_id_of_all_folds, fold_arranger, fold, class_labels=None):
+    def combine_trial_for_partition(self, subject_id_of_all_folds, trial_id_to_subject_dict):
+        subject_id_of_non_test_subjects = [subject[0] for subject in subject_id_of_all_folds[:-1]]
+        subject_id_of_the_test_subject = subject_id_of_all_folds[-1]
+
+        trial_id_of_non_test_subjects, trial_id_of_the_test_subject = [], []
+        [trial_id_of_non_test_subjects.extend(trial_id_to_subject_dict[subject]) for subject in
+         subject_id_of_non_test_subjects]
+        [trial_id_of_the_test_subject.extend(trial_id_to_subject_dict[subject]) for subject in
+         subject_id_of_the_test_subject]
+
+        random.shuffle(trial_id_of_non_test_subjects)
+
+        train_validate_length = len(trial_id_of_non_test_subjects)
+
+        train_length = int(train_validate_length * 0.8)
+
+        trial_id_of_all_partitions = {'train': trial_id_of_non_test_subjects[:train_length],
+                                      'validate': trial_id_of_non_test_subjects[train_length:],
+                                      'test': trial_id_of_the_test_subject}
+
+        return trial_id_of_all_partitions
+
+    def init_dataloader(self, subject_id_of_all_folds, trial_id_to_subject_dict, fold_arranger, fold,
+                        class_labels=None):
 
         # Set the fold-to-partition configuration.
         # Each fold have approximately the same number of sessions.
-
+        self.init_random_seed()
         partition_dictionary = self.init_partition_dictionary()
 
-        fold_index = np.roll(np.arange(self.num_folds), fold)
+        fold_index = np.roll(np.arange(len(subject_id_of_all_folds)), fold)
         subject_id_of_all_folds = list(itemgetter(*fold_index)(subject_id_of_all_folds))
+        trial_id_of_all_partitions = self.combine_trial_for_partition(subject_id_of_all_folds, trial_id_to_subject_dict)
+        data_dict, normalize_dict = fold_arranger.make_data_dict(trial_id_of_all_partitions)
         print(subject_id_of_all_folds)
-        data_dict, _ = fold_arranger.make_data_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
-        length_dict = fold_arranger.make_length_dict(subject_id_of_all_folds, partition_dictionary=partition_dictionary)
 
         dataloaders_dict = {}
         for partition in partition_dictionary.keys():
-            dataset = MAHNOBDataset(self.config['generic_config'], data_dict[partition], modality=self.modality,
-                                    emotion_dimension=self.emotion_dimension,
-                                    time_delay=0, class_labels=class_labels, mode=partition,
-                                    load_knowledge=True, knowledge_path=self.knowledge_load_path, fold=fold)
+            dataset = MAHNOBDatasetTrial(self.config['generic'], data_dict[partition], normalize_dict=normalize_dict,
+                                         modality=self.modality,
+                                         continuous_label_frequency=self.config['generic']['frequency_dict']['continuous_label'],
+                                         emotion_dimension=self.emotion_dimension,
+                                         time_delay=self.time_delay, class_labels=class_labels, mode=partition)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
                 dataset=dataset, batch_size=self.batch_size, shuffle=True if partition == "train" else False)
 
-        return dataloaders_dict, length_dict
+        return dataloaders_dict, normalize_dict
 
     def experiment(self):
 
         save_path = os.path.join(self.model_save_path, self.model_name)
 
-        fold_arranger = NFoldMahnobArranger(dataset_load_path=self.dataset_load_path,
-                                            dataset_folder=self.dataset_folder,
-                                            include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
-                                            modality=self.modality)
-        subject_id_of_all_folds, _ = fold_arranger.assign_subject_to_fold(self.num_folds)
+        fold_arranger = NFoldMahnobArrangerLOSO(dataset_load_path=self.dataset_load_path,
+                                                normalize_eeg_raw=0,
+                                                dataset_folder=self.dataset_folder, window_sec=self.window_sec,
+                                                hop_size_sec=self.hop_size,
+                                                include_session_having_no_continuous_label=self.include_session_having_no_continuous_label,
+                                                modality=self.modality, feature_extraction=False)
+
+        subject_id_of_all_folds, trial_id_to_subject_dict = fold_arranger.assign_subject_to_fold(self.num_folds)
         print(subject_id_of_all_folds)
 
         if self.kd_loss_function == "l1":
@@ -181,18 +200,21 @@ class TeacherEEG1D(GenericExperiment):
             os.makedirs(fold_save_path, exist_ok=True)
             checkpoint_filename = os.path.join(fold_save_path, "checkpoint.pkl")
 
-            dataloaders_dict, lengths_dict = self.init_dataloader(subject_id_of_all_folds, fold_arranger, fold)
+            dataloaders_dict, normalize_dict = self.init_dataloader(subject_id_of_all_folds, trial_id_to_subject_dict, fold_arranger, fold)
 
-            trainer = MAHNOBRegressionTrainerLoadKnowledge(model, stamp=self.stamp, model_name=self.model_name,
-                                                           learning_rate=self.learning_rate, kd_weight=self.kd_weight, ccc_weight=self.ccc_weight,
-                                                           min_learning_rate=self.min_learning_rate,
-                                                           metrics=self.metrics,
-                                                           save_path=fold_save_path, early_stopping=self.early_stopping,
-                                                           patience=self.patience, factor=self.factor,
-                                                           load_best_at_each_epoch=self.load_best_at_each_epoch,
-                                                           milestone=self.milestone, criterion=criterion, verbose=True,
-                                                           save_plot=self.save_plot,
-                                                           device=self.device)
+            trainer = MAHNOBRegressionTrainerLoadKnowledgeTrial(model, stamp=self.stamp, model_name=self.model_name,
+                                                                learning_rate=self.learning_rate,
+                                                                kd_weight=self.kd_weight, ccc_weight=self.ccc_weight,
+                                                                min_learning_rate=self.min_learning_rate,
+                                                                metrics=self.metrics,
+                                                                save_path=fold_save_path,
+                                                                early_stopping=self.early_stopping,
+                                                                patience=self.patience, factor=self.factor,
+                                                                load_best_at_each_epoch=self.load_best_at_each_epoch,
+                                                                milestone=self.milestone, criterion=criterion,
+                                                                verbose=True,
+                                                                save_plot=self.save_plot,
+                                                                device=self.device)
 
             parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
                                                 release_count=self.release_count, backbone_mode=self.backbone_mode)
@@ -204,13 +226,13 @@ class TeacherEEG1D(GenericExperiment):
                 checkpoint_controller.init_csv_logger(self.args, self.config)
 
             if not trainer.fit_finished:
-                trainer.fit(dataloaders_dict, lengths_dict, num_epochs=self.num_epochs,
+                trainer.fit(dataloaders_dict, num_epochs=self.num_epochs,
                             min_num_epoch=self.min_num_epochs,
                             save_model=True, parameter_controller=parameter_controller,
                             checkpoint_controller=checkpoint_controller)
 
             if not trainer.fold_finished:
-                trainer.test(dataloaders_dict, lengths_dict, checkpoint_controller)
+                trainer.test(dataloaders_dict, checkpoint_controller)
                 checkpoint_controller.save_checkpoint(trainer, parameter_controller, fold_save_path)
 
 
