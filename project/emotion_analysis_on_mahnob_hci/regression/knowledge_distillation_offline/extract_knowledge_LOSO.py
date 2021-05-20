@@ -77,6 +77,8 @@ class KnowledgeExtractor(GenericExperiment):
     def create_model(self):
 
         opt = self.config['kd_config']['2d1d']
+        opt['teacher_frame_model_state_folder'] = opt['teacher_frame_model_state_folder'] + "_loso"
+
         teacher = kd_2d1d(backbone_state_dict=self.backbone_state_dict_frame, backbone_mode=self.backbone_mode,
                           modality=self.modality,
                           embedding_dim=opt['cnn1d_embedding_dim'], channels=opt['cnn1d_channels'],
@@ -171,9 +173,9 @@ class KnowledgeExtractor(GenericExperiment):
                                              self.config['kd_config']['2d1d']['teacher_knowledge_save_folder'] + "_loso",
                                              str(fold))
 
-            trainer.validate(dataloaders_dict['train'], feature_save_path=feature_save_path)
+            trainer.validate(dataloaders_dict['test'], feature_save_path=feature_save_path)
 
-            trainer.validate(dataloaders_dict['validate'], feature_save_path=feature_save_path)
+            # trainer.validate(dataloaders_dict['validate'], feature_save_path=feature_save_path)
 
 
 import sys

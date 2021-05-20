@@ -96,10 +96,10 @@ if __name__ == '__main__':
                         help='Whether to load the best model state at the end of each epoch?')
 
 
-    parser.add_argument('-ccc_weights', default=[0.01, 0.02, 0.03, 0.04, 0.05], nargs="+", type=float,
+    parser.add_argument('-ccc_weights', default=[0.5], nargs="+", type=float,
                               help='Which fold(s) to run in this session?')
 
-    parser.add_argument('-kd_weights', default=[4,5,6,7,8,9,10], nargs="+", type=float)
+    parser.add_argument('-kd_weights', default=[0.5], nargs="+", type=float)
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
