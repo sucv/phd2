@@ -436,8 +436,8 @@ class MAHNOBRegressionTrainerLoadKnowledgeTrial(MAHNOBRegressionTrainerTrial):
             if 'eeg_psd' in X:
                 inputs = X['eeg_psd'].to(self.device)
 
-            #if train_mode:
-            knowledges = X['knowledge'].to(self.device)
+            if epoch is not None:
+                knowledges = X['knowledge'].to(self.device)
 
             labels = torch.squeeze(Y.float().to(self.device), dim=2)
 
@@ -454,14 +454,14 @@ class MAHNOBRegressionTrainerLoadKnowledgeTrial(MAHNOBRegressionTrainerTrial):
 
             loss_ccc = self.criterion['ccc'](outputs, labels.unsqueeze(2))
 
-            if train_mode:
+            if epoch is not None:
                 loss_kd = self.criterion['kd'](knowledges, features['temporal']) * self.kd_weight
                 loss = self.ccc_weight * loss_ccc + loss_kd
                 # loss = loss_ccc
             else:
-                loss_kd = self.criterion['kd'](knowledges, features['temporal']) * self.kd_weight
-                loss = self.ccc_weight * loss_ccc + loss_kd
-                # loss = loss_ccc
+                # loss_kd = self.criterion['kd'](knowledges, features['temporal']) * self.kd_weight
+                # loss = self.ccc_weight * loss_ccc + loss_kd
+                loss = loss_ccc
 
             running_loss += loss.mean().item()
 

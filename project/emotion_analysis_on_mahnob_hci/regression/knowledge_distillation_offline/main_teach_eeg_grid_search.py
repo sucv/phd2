@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="group_emo_kd_subind", help='The experiment name.')
-    parser.add_argument('-gpu', default=2, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
     parser.add_argument('-stamp', default='grid', type=str, help='To indicate different experiment instances')
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('-case', default='loso', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
                                                                 'unit for shuffling is trial, subject, and subject for the three options, respectively.')
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int,
+    parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,14,15,16,17,18,19,20,21,22,23], nargs="+", type=int,
                         help='Which fold(s) to run in this session?')
 
     parser.add_argument('-kd_loss_function', default='l1', type=str, help='l1, l1s, l2')
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('-ccc_weights', default=[0.01, 0.02, 0.03, 0.04, 0.05], nargs="+", type=float,
                               help='Which fold(s) to run in this session?')
 
-    parser.add_argument('-kd_weights', default=[1, 2, 3, 4, 5], nargs="+", type=float)
+    parser.add_argument('-kd_weights', default=[4,5,6,7,8,9,10], nargs="+", type=float)
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)

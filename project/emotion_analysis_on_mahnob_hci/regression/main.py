@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='loso_128x2', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='128x2', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image, eeg_raw, eeg_psd')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
@@ -19,7 +19,7 @@ if __name__ == '__main__':
                                                                 'unit for shuffling is trial, subject, and subject for the three options, respectively.')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[11], nargs="+", type=int, help='Which fold(s) to run in this session?')
+    parser.add_argument('-folds_to_run', default=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob

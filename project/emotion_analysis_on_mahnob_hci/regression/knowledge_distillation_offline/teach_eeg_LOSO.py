@@ -24,7 +24,7 @@ class TeacherEEG1D(GenericExperiment):
     def __init__(self, args, ccc_weight=None, kd_weight=None):
         super().__init__(args)
 
-        self.num_folds = args.num_folds
+        self.num_folds = 24
         self.folds_to_run = args.folds_to_run
         self.include_session_having_no_continuous_label = 0
         self.case = args.case
@@ -43,7 +43,7 @@ class TeacherEEG1D(GenericExperiment):
 
         self.modality = args.modality
         self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[
-            0] + "_" + self.stamp + "_ccc_weight_" + str(self.ccc_weight) + "_kd_weight_" + str(
+            0] + "_" + self.case + "_" + self.stamp + "_ccc_weight_" + str(self.ccc_weight) + "_kd_weight_" + str(
             self.kd_weight) + "_" + self.kd_loss_function + "_" + str(
             self.kl_div_T)
 
@@ -156,10 +156,10 @@ class TeacherEEG1D(GenericExperiment):
 
         dataloaders_dict = {}
         for partition in partition_dictionary.keys():
-            dataset = MAHNOBDatasetTrial(self.config['generic'], data_dict[partition], normalize_dict=normalize_dict,
-                                         modality=self.modality,
-                                         continuous_label_frequency=self.config['generic']['frequency_dict']['continuous_label'],
-                                         emotion_dimension=self.emotion_dimension,
+            dataset = MAHNOBDatasetTrial(self.config['generic_config'], data_dict[partition], normalize_dict=normalize_dict,
+                                         modality=self.modality, load_knowledge=True, knowledge_path=self.knowledge_load_path,
+                                         continuous_label_frequency=self.config['generic_config']['frequency_dict']['continuous_label'],
+                                         emotion_dimension=self.emotion_dimension, fold=fold,
                                          time_delay=self.time_delay, class_labels=class_labels, mode=partition)
             dataloaders_dict[partition] = torch.utils.data.DataLoader(
                 dataset=dataset, batch_size=self.batch_size, shuffle=True if partition == "train" else False)

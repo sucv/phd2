@@ -42,7 +42,7 @@ class TeacherEEG1D(GenericExperiment):
 
         self.modality = args.modality
         self.model_name = self.experiment_name + "_" + args.model_name + "_" + "reg_v" + "_" + self.modality[
-            0] + "_" + self.stamp + "_ccc_weight_" + str(self.ccc_weight) + "_kd_weight_" + str(
+            0] + "_" + self.case + "_" + self.stamp + "_ccc_weight_" + str(self.ccc_weight) + "_kd_weight_" + str(
             self.kd_weight) + "_" + self.kd_loss_function + "_" + str(
             self.kl_div_T)
 
