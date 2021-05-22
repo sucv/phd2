@@ -57,11 +57,21 @@ def csv_generator(path_to_read_result, num_folds=10, **kwargs):
     validate_result[:, -2] = np.mean(validate_result[:, :-2], axis=1)
     validate_result[:, -1] = np.std(validate_result[:, :-2], axis=1)
 
-    result_csv = pd.DataFrame(validate_result, columns = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mean', 'std'], index=metrics).rename_axis("val")
+    # result_csv = pd.DataFrame(validate_result, columns = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mean', 'std'], index=metrics).rename_axis("val")
+    # result_csv.to_csv(csv_filename)
+    #
+    # result_csv = pd.DataFrame(test_result,
+    #                           columns=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mean', 'std'], index=metrics).rename_axis("test")
+    # result_csv.to_csv(csv_filename, mode='a')
+
+    result_csv = pd.DataFrame(validate_result,
+                              columns=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13','14','15','16','17','18','19','20','21','22','23','mean', 'std'],
+                              index=metrics).rename_axis("val")
     result_csv.to_csv(csv_filename)
 
     result_csv = pd.DataFrame(test_result,
-                              columns=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mean', 'std'], index=metrics).rename_axis("test")
+                              columns=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13','14','15','16','17','18','19','20','21','22','23','mean', 'std'],
+                              index=metrics).rename_axis("test")
     result_csv.to_csv(csv_filename, mode='a')
 
 
@@ -69,7 +79,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument(
         '-path_to_read_result',
-        default='/home/zhangsu/phd2/save/emotion_video_1d_only_reg_v_eeg_psd_confirm_128x4_2',
+        default='/home/zhangsu/phd2/save/emotion_video_2d1d_reg_v_frame_loso',
         type=str, help='The root directory of the dataset.')
     args = parser.parse_args()
-    csv_generator(args.path_to_read_result)
+    csv_generator(args.path_to_read_result, num_folds=24)

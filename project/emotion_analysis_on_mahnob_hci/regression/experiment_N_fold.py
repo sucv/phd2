@@ -138,7 +138,8 @@ class Experiment(GenericExperiment):
         return model
 
     def init_partition_setting(self):
-        partition_setting = {'train': 168, 'validate': 47, 'test': 24}
+        # partition_setting = {'train': 168, 'validate': 47, 'test': 24}
+        partition_setting = {'train': 129, 'validate': 86, 'test': 24}
         return partition_setting
 
     def init_dataloader(self, partition_setting, trial_id_of_all_folds, fold_arranger, fold, class_labels=None):
