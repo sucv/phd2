@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='test_trans', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='avec2019', type=str, help='The dataset name.')
 
     # Dataset
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('-backbone_state_dict', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
-    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128, 128], nargs="+", type=int, help='The size for each channel')
+    parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128], nargs="+", type=int, help='The size for each channel')
     parser.add_argument('-cnn1d_kernel_size', default=5, type=int, help='The size of the 1D kernel for temporal convolutional networks.')
     parser.add_argument('-cnn1d_dropout', default=0.1, type=float, help='The dropout rate.')
 

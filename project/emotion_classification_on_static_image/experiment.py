@@ -5,7 +5,7 @@ from project.emotion_classification_on_static_image.dataset import CKplusArrange
     EmotionalStaticImgClassificationDataset, FerplusCrossEntropyClassificationDataset
 from base.checkpointer import ClassificationCheckpointer
 from project.emotion_classification_on_static_image.trainer import Trainer
-from project.emotion_classification_on_static_image.parameter_control import ParamControl
+from project.emotion_classification_on_static_image.parameter_control import ParamControlAllRelease
 from models.model import my_res50
 
 import os
@@ -49,7 +49,7 @@ class Experiment(GenericExperiment):
         self.patience = args.patience
         self.early_stopping = args.early_stopping
 
-        self.milestone = [0]
+        self.milestone = args.milestone
         self.release_count = args.release_count
         self.gradual_release = args.gradual_release
         self.load_best_at_each_epoch = args.load_best_at_each_epoch
@@ -58,7 +58,7 @@ class Experiment(GenericExperiment):
 
         state_dict_name = self.config['state_dict_setting'][self.model_mode]
         model = my_res50(root_dir=self.model_load_path, num_classes=self.config['num_classes'], mode=self.model_mode,
-                         use_pretrained=self.config['use_pretrained'], state_dict_name=state_dict_name)
+                         use_pretrained=self.config['use_pretrained'], state_dict_name=state_dict_name, fix_backbone=False)
         return model
 
     def load_config(self):
@@ -206,13 +206,13 @@ class Experiment(GenericExperiment):
 
             trainer = Trainer(model, model_name=self.model_name, save_path=fold_save_path,
                               criterion=criterion, num_classes=self.config['num_classes'],
-                              device=device, factor=self.factor,
+                              device=device, factor=self.factor, max_epoch=self.num_epochs,
                               learning_rate=self.learning_rate, fold=fold, milestone=milestone,
                               patience=self.patience, early_stopping=self.early_stopping,
                               min_learning_rate=self.min_learning_rate,
                               samples_weight=samples_weights, load_best_at_each_epoch=self.load_best_at_each_epoch)
 
-            parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
+            parameter_controller = ParamControlAllRelease(trainer, gradual_release=self.gradual_release,
                                                 release_count=self.release_count, backbone_mode=self.model_mode)
             checkpoint_controller = ClassificationCheckpointer(checkpoint_filename, trainer, parameter_controller,
                                                                resume=self.resume)

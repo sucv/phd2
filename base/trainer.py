@@ -140,19 +140,23 @@ class ClassificationTrainer(GenericTrainer):
         self.load_best_at_each_epoch = load_best_at_each_epoch
         self.best_epoch_info = {}
 
-    def train(self, data_loader, topk_accuracy):
+        self.num_epoch_warm_up = self.max_epoch // 25
+
+    def train(self, data_loader, topk_accuracy, epoch):
         self.model.train()
         epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix = self.loop(data_loader=data_loader,
                                                                                train_mode=True,
-                                                                               topk_accuracy=topk_accuracy)
+                                                                               topk_accuracy=topk_accuracy,
+                                                                               epoch=epoch)
         return epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix
 
-    def validate(self, data_loader, topk_accuracy):
+    def validate(self, data_loader, topk_accuracy, epoch):
         with torch.no_grad():
             self.model.eval()
             epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix = self.loop(data_loader=data_loader,
                                                                                    train_mode=False,
-                                                                                   topk_accuracy=topk_accuracy)
+                                                                                   topk_accuracy=topk_accuracy,
+                                                                                   epoch=epoch)
         return epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix
 
     def test(self, data_to_load, topk_accuracy, parameter_controller=None, checkpoint_controller=None):
@@ -195,20 +199,23 @@ class ClassificationTrainer(GenericTrainer):
 
             time_epoch_start = time.time()
 
-            if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
+            # if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
+            #
+            #     parameter_controller.release_param()
+            #     self.model.load_state_dict(self.best_epoch_info['model_weights'])
+            #
+            #     if parameter_controller.early_stop:
+            #         break
 
-                parameter_controller.release_param()
-                self.model.load_state_dict(self.best_epoch_info['model_weights'])
-
-                if parameter_controller.early_stop:
-                    break
+            if epoch in self.milestone:
+                self.reduce_lr()
 
             print("There are {} layers to update.".format(len(self.optimizer.param_groups[0]['params'])))
 
             train_loss, train_acc, train_kappa, train_confusion_matrix = self.train(
-                dataloaders_dict['train'], topk_accuracy)
+                dataloaders_dict['train'], topk_accuracy, epoch)
             validate_loss, validate_acc, validate_kappa, validate_confusion_matrix = self.validate(
-                dataloaders_dict['validate'], topk_accuracy)
+                dataloaders_dict['validate'], topk_accuracy, epoch)
 
             self.train_losses.append(train_loss)
             self.validate_losses.append(validate_loss)
@@ -276,10 +283,11 @@ class ClassificationTrainer(GenericTrainer):
                 if self.early_stopping_counter <= 0:
                     self.fit_finished = True
 
-            if isinstance(self.criterion, CrossEntropyLoss):
-                self.scheduler.step(validate_loss)
-            else:
-                self.scheduler.step(validate_acc)
+            if self.scheduler is not None:
+                if isinstance(self.criterion, CrossEntropyLoss):
+                    self.scheduler.step(validate_loss)
+                else:
+                    self.scheduler.step(validate_acc)
 
             self.start_epoch = epoch + 1
 
@@ -288,10 +296,14 @@ class ClassificationTrainer(GenericTrainer):
 
             checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
+            if epoch == self.num_epoch_warm_up:
+                for params in self.optimizer.param_groups:
+                    params['lr'] = self.learning_rate
+
         self.fit_finished = True
         checkpoint_controller.save_checkpoint(self, parameter_controller, self.save_path)
 
-    def loop(self, data_loader, train_mode=True, topk_accuracy=1):
+    def loop(self, data_loader, train_mode=True, topk_accuracy=1, epoch=0):
 
         running_loss = 0.0
         y_true = []
@@ -336,3 +348,15 @@ class ClassificationTrainer(GenericTrainer):
         epoch_confusion_matrix = self.calculate_confusion_matrix(y_pred, y_true)
 
         return epoch_loss, epoch_acc, epoch_kappa, epoch_confusion_matrix
+
+    def reduce_lr(self):
+        for params in self.optimizer.param_groups:
+            params['lr'] /= 10.
+
+        print(self.optimizer)
+
+    def warmup_lr(self, batch, num_batch_warm_up):
+        for params in self.optimizer.param_groups:
+            params['lr'] = batch * self.learning_rate / num_batch_warm_up
+
+        # print(self.optimizer)

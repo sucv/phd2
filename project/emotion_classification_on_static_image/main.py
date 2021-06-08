@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     # Server
     parser.add_argument('-experiment_name', default="static_image_classification", help='The experiment name.')
-    parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance computing server or not?')
     parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances') # pretrain_ResVIZ
@@ -27,17 +27,17 @@ if __name__ == '__main__':
     parser.add_argument('-folds_to_run', default=None, nargs="+", type=int, help='Which fold(s) to run in this session?')
 
     # Training
-    parser.add_argument('-resume', default=1, type=int, help='Resume from checkpoint?')
+    parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
     parser.add_argument('-dataset', default="ferp_ce", help='Dataset: ckplus, oulu, fer2013, ferp, ferp_ce, rafd, rafdb, affectnet')
-    parser.add_argument('-model_name', default="my_res50_ir_se", help='The name to specify the model.')
-    parser.add_argument('-model_mode', default="ir_se", help='Mode: ir, ir_se')
-    parser.add_argument('-learning_rate', default=1e-3, type=float, help='The initial learning rate.')
-    parser.add_argument('-min_learning_rate', default=1e-7, type=float, help='The minimum learning rate.')
-    parser.add_argument('-num_epochs', default=7000, type=int, help='The total of epochs to run during training.')
+    parser.add_argument('-model_name', default="my_res50_ir", help='The name to specify the model.')
+    parser.add_argument('-model_mode', default="ir", help='Mode: ir, ir_se')
+    parser.add_argument('-learning_rate', default=1e-2, type=float, help='The initial learning rate.')
+    parser.add_argument('-min_learning_rate', default=1e-6, type=float, help='The minimum learning rate.')
+    parser.add_argument('-num_epochs', default=125, type=int, help='The total of epochs to run during training.')
     parser.add_argument('-topk_accuracy', default=1, type=int, help='Whether the top k inferences covered the label?')
     parser.add_argument('-min_num_epochs', default=10, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-use_weighted_sampler', default=1, type=int, help='Whether to balance the samples of each classes using weighted sampler?')
-    parser.add_argument('-batch_size', default=16, type=int, help='The batch-size.')
+    parser.add_argument('-batch_size', default=512, type=int, help='The batch-size.')
 
     # Scheduler
     parser.add_argument('-patience', default=30, type=int, help='The number of epoch to run before changing the learning rate.')
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     # Parameter Control
     parser.add_argument('-gradual_release', default=1, type=int, help='Whether to gradually release some layers?')
     parser.add_argument('-release_count', default=1, type=int, help='How many layer groups to release?')
-    parser.add_argument('-milestone', default=[0], nargs="+", type=int, help='The specific epochs to do something.')
+    parser.add_argument('-milestone', default=[35, 65, 95], nargs="+", type=int, help='The specific epochs to do something.')
     parser.add_argument('-load_best_at_each_epoch', default=0, type=int,
                         help='Whether to load the best model state at the end of each epoch?')
 

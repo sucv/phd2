@@ -15,7 +15,7 @@ class Flatten(Module):
 
 class my_res50(nn.Module):
     def __init__(self, input_channels=3, num_classes=8, use_pretrained=True, state_dict_name='', root_dir='', mode="ir",
-                 embedding_dim=512):
+                 embedding_dim=512, fix_backbone=True):
         super().__init__()
         self.backbone = Backbone(input_channels=input_channels, num_layers=50, drop_ratio=0.4, mode=mode)
         if use_pretrained:
@@ -41,8 +41,9 @@ class my_res50(nn.Module):
             else:
                 self.backbone.load_state_dict(state_dict)
 
-            for param in self.backbone.parameters():
-                param.requires_grad = False
+            if fix_backbone:
+                for param in self.backbone.parameters():
+                    param.requires_grad = False
 
         self.backbone.output_layer = Sequential(BatchNorm2d(embedding_dim),
                                                 Dropout(0.4),

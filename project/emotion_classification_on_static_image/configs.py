@@ -7,12 +7,12 @@ state_dict_setting = {
 }
 
 config_affectnet = {
-    "local_root_directory": "E:\\AffectNet",
+    "local_root_directory": "H:\\AffectNet",
     "local_image_folder": "Manually_Annotated_Images",
     "local_label_filename_train": "training.csv",
     "local_label_filename_validate": "validation.csv",
-    "local_output_directory": "E:\\AffectNet\\preprocessed",
-    "output_image_size": 120,
+    "local_output_directory": "H:\\AffectNet\\preprocessed_abaw2",
+    "output_image_size": 48,
     "landmark_number": 68,
     "resize": img_size,
     "center_crop": crop_size,
@@ -60,10 +60,10 @@ config_ferplus = {
     "state_dict_setting": state_dict_setting,
     "resize": img_size,
     "center_crop": crop_size,
-    "mean": [0.5077, 0.5077, 0.5077],
-    "std": [0.2544, 0.2544, 0.2544],
+    "mean": [0.5, 0.5, 0.5],
+    "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
-    "batch_size": 32,
+    "batch_size": 512,
     "use_weighted_sampler": False
 }
 

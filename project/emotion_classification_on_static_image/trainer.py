@@ -21,16 +21,22 @@ class Trainer(ClassificationTrainer):
         elif isinstance(self.criterion, CrossEntropyLoss):
             mode = 'min'
 
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode, patience=self.patience,
-                                                                    factor=self.factor)
+        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode, patience=self.patience,
+        #                                                             factor=self.factor)
+        # self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=self.milestone, gamma=self.factor)
+        self.scheduler = None
 
-    def loop(self, data_loader, train_mode=True, topk_accuracy=1):
+    def loop(self, data_loader, train_mode=True, topk_accuracy=1, epoch=0):
 
         running_loss = 0.0
         y_true = []
         y_pred = []
-
+        num_batch_warm_up = len(data_loader) * self.num_epoch_warm_up
         for batch_index, (X, Y) in tqdm(enumerate(data_loader), total=len(data_loader)):
+
+            if train_mode:
+                if epoch + 1 <= self.num_epoch_warm_up:  # adjust LR for each training batch during warm up
+                    self.warmup_lr(batch_index + 1, num_batch_warm_up)
 
             inputs = X.to(self.device)
             labels = torch.squeeze(Y.long().to(self.device))

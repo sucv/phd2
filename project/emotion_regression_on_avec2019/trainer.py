@@ -225,9 +225,9 @@ class AVEC2019Trainer(GenericTrainer):
             inputs = X.to(self.device)
             labels = Y.float().to(self.device)
 
+            loss_weights = torch.ones_like(labels).to(self.device)
             # Determine the weight for loss function
             if train_mode:
-                loss_weights = torch.ones_like(labels).to(self.device)
                 self.optimizer.zero_grad()
 
                 if self.head == "multi-headed":
@@ -238,8 +238,8 @@ class AVEC2019Trainer(GenericTrainer):
                         loss_weights[:, :, 0] *= 0.7
                         loss_weights[:, :, 1] *= 0.3
                     elif self.train_emotion == "valence":
-                        loss_weights[:, :, 0] *= 0.7
-                        loss_weights[:, :, 1] *= 0.3
+                        loss_weights[:, :, 0] *= 0.3
+                        loss_weights[:, :, 1] *= 0.7
                     else:
                         raise ValueError("Unknown emotion dimention to train!")
 
@@ -248,12 +248,12 @@ class AVEC2019Trainer(GenericTrainer):
             output_handler.place_clip_output_to_subjectwise_dict(outputs.detach().cpu().numpy(), indices, sessions)
             continuous_label_handler.place_clip_output_to_subjectwise_dict(labels.detach().cpu().numpy(), indices,
                                                                            sessions)
-            loss = self.criterion(outputs, labels)
+            loss = self.criterion(outputs, labels, loss_weights)
 
             running_loss += loss.mean().item() * outputs.size(0)
 
             if train_mode:
-                loss.backward(loss_weights, retain_graph=True)
+                loss.backward()
                 self.optimizer.step()
 
             #  print_progress(batch_index, len(data_loader))

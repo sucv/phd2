@@ -36,6 +36,7 @@ class PreprocessingAffectNet(GenericImagePreprcessing):
 
         for label_csv_file in self.label_csv_list:
 
+            count = 0
             # Make the folder naming universal.
             partition = "train"
             if label_csv_file == "validation":
@@ -43,18 +44,19 @@ class PreprocessingAffectNet(GenericImagePreprcessing):
 
             csv_data = load_single_csv(self.root_directory, label_csv_file, ".csv")
 
-            for index, data in csv_data.iterrows():
+            for index, data in tqdm(csv_data.iterrows(), total=len(csv_data)):
 
                 image_fullname = os.path.join(
                     self.root_directory, self.image_folder, data[0].split("/")[0], data[0].split("/")[1])
 
                 emotion = self.emotion_dict[data[6]]
+                valence, arousal = data[7], data[8]
 
                 if emotion in self.selected_emotion:
                     output_directory = os.path.join(self.root_directory, self.output_directory, partition, emotion)
                     os.makedirs(output_directory, exist_ok=True)
 
-                    output_fullname = os.path.join(output_directory, data[0].split("/")[0] + "_" + data[0].split("/")[1])
+                    output_fullname = os.path.join(output_directory, str(count) + "_" + str(valence) + "_" + str(arousal) + "_.jpg")
 
                     if not os.path.isfile(output_fullname):
                         landmark = self.restore_landmark_to_ndarray(data[5])
@@ -65,7 +67,7 @@ class PreprocessingAffectNet(GenericImagePreprcessing):
                         croped_image = Image.fromarray(croped_image)
 
                         croped_image.save(output_fullname, "JPEG")
-
+                        count += 1
 
     @staticmethod
     def restore_landmark_to_ndarray(landmark_string):
@@ -473,7 +475,7 @@ class PreprocessingRAFD(PreprocessingOuluCISIA):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocessing of Emotion Classification Image Datasets.")
-    parser.add_argument("-d", default="fer+", help="Wchich dataset to preprocess? [affectnet, ck+, fer2013, fer+, rafd, rafdb, oulu]")
+    parser.add_argument("-d", default="affectnet", help="Wchich dataset to preprocess? [affectnet, ck+, fer2013, fer+, rafd, rafdb, oulu]")
     args = parser.parse_args()
 
     if args.d == "affectnet":

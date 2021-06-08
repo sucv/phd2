@@ -498,14 +498,14 @@ class MAHNOBRegressionTrainerTrial(GenericTrainer):
             # Get the losses and the record dictionaries for training and validation.
             train_loss, train_record_dict = self.train(data_to_load['train'], epoch)
 
-            # # Combine the record to a long array for each subject.
-            # self.combined_record_dict['train'] = self.combine_record_dict(
-            #     self.combined_record_dict['train'], train_record_dict)
+            # Combine the record to a long array for each subject.
+            self.combined_record_dict['train'] = self.combine_record_dict(
+                self.combined_record_dict['train'], train_record_dict)
 
             validate_loss, validate_record_dict = self.validate(data_to_load['validate'], epoch)
 
-            # self.combined_record_dict['validate'] = self.combine_record_dict(
-            #     self.combined_record_dict['validate'], validate_record_dict)
+            self.combined_record_dict['validate'] = self.combine_record_dict(
+                self.combined_record_dict['validate'], validate_record_dict)
 
             self.train_losses.append(train_loss)
             self.validate_losses.append(validate_loss)

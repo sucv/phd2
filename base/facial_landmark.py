@@ -60,7 +60,7 @@ class facial_image_crop_by_landmark(object):
 
     def crop_image(self, image, landmark):
         affine_matrix = self.get_affine_matrix(landmark)
-        aligned_landmark = self.align_landmark(landmark, affine_matrix)
+        # aligned_landmark = self.align_landmark(landmark, affine_matrix)
         aligned_image = self.align_image(image, affine_matrix)
         return aligned_image
 

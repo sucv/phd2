@@ -15,3 +15,17 @@ class ParamControl(ResnetParamControl):
         return module_list
 
 
+class ParamControlAllRelease(ResnetParamControl):
+
+    def init_module_list(self):
+
+        # module_list = [[(4, 10), (163, 187)], [(142, 163)], [(121, 142)], [(107, 121)], [(93, 107)], [(79, 93)], [(62, 79)], [(48, 62)], [(31, 48)], [(17, 31)], [(10, 17)]]
+        # module_list = [[(4, 10), (163, 187), (62, 163), (31, 62)]]
+        module_list = [[(0, 187)]]
+        # if self.backbone_mode == "ir_se":
+        #     module_list = [[(4, 10), (205, 235)], [(196, 205)], [(187, 196)], [(178, 187)], [(169, 178)], [(160, 169)], [(151, 160)], [(142, 151)], [(133, 142)], [(124, 133)],
+        #                    [(115, 124)], [(106, 115)], [(97, 106)], [(88, 97)]]
+
+        return module_list
+
+

@@ -10,15 +10,15 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='1e5', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
-    parser.add_argument('-case', default='trial', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
+    parser.add_argument('-case', default='loso', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
                                                                 'unit for shuffling is trial, subject, and subject for the three options, respectively.')
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
-    parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int,
+    parser.add_argument('-folds_to_run', default=[0], nargs="+", type=int,
                         help='Which fold(s) to run in this session?')
 
     parser.add_argument('-kd_loss_function', default='l1', type=str, help='l1, l1s, l2')
@@ -96,10 +96,10 @@ if __name__ == '__main__':
                         help='Whether to load the best model state at the end of each epoch?')
 
 
-    parser.add_argument('-ccc_weights', default=[1], nargs="+", type=float,
+    parser.add_argument('-ccc_weights', default=[0.1], nargs="+", type=float,
                               help='Which fold(s) to run in this session?')
 
-    parser.add_argument('-kd_weights', default=[0, 0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95], nargs="+", type=float)
+    parser.add_argument('-kd_weights', default=[0.9], nargs="+", type=float)
 
     args = parser.parse_args()
     sys.path.insert(0, args.python_package_path)
