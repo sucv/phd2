@@ -165,7 +165,7 @@ class ClassificationTrainer(GenericTrainer):
             print("Starting testing, on device:", self.device)
 
         _, self.test_accuracy, self.test_kappa, self.test_confusion_matrix = self.validate(data_to_load['test'],
-                                                                                           topk_accuracy)
+                                                                                           topk_accuracy, epoch=None)
 
         if self.verbose:
             print("Test accuracy: {:.3f}, kappa: {:.3f}".format(self.test_accuracy, self.test_kappa))
