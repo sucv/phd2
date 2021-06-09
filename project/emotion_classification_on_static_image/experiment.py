@@ -5,7 +5,7 @@ from project.emotion_classification_on_static_image.dataset import CKplusArrange
     EmotionalStaticImgClassificationDataset, FerplusCrossEntropyClassificationDataset
 from base.checkpointer import ClassificationCheckpointer
 from project.emotion_classification_on_static_image.trainer import Trainer
-from project.emotion_classification_on_static_image.parameter_control import ParamControlAllRelease
+from project.emotion_classification_on_static_image.parameter_control import ParamControl
 from models.model import my_res50
 
 import os
@@ -58,7 +58,7 @@ class Experiment(GenericExperiment):
 
         state_dict_name = self.config['state_dict_setting'][self.model_mode]
         model = my_res50(root_dir=self.model_load_path, num_classes=self.config['num_classes'], mode=self.model_mode,
-                         use_pretrained=self.config['use_pretrained'], state_dict_name=state_dict_name, fix_backbone=False)
+                         use_pretrained=self.config['use_pretrained'], state_dict_name=state_dict_name, fix_backbone=True)
         return model
 
     def load_config(self):
@@ -92,7 +92,7 @@ class Experiment(GenericExperiment):
         transform = []
         transform.append(Resize(self.config['resize']))
         transform.append(RandomCrop(self.config['center_crop']))
-        transform.append(ColorJitter())
+        # transform.append(ColorJitter())
         transform.append(RandomAffine(degrees=10))
         transform.append(RandomHorizontalFlip())
         transform.append(ToTensor())
@@ -212,11 +212,12 @@ class Experiment(GenericExperiment):
                               min_learning_rate=self.min_learning_rate,
                               samples_weight=samples_weights, load_best_at_each_epoch=self.load_best_at_each_epoch)
 
-            parameter_controller = ParamControlAllRelease(trainer, gradual_release=self.gradual_release,
+            parameter_controller = ParamControl(trainer, gradual_release=self.gradual_release,
                                                 release_count=self.release_count, backbone_mode=self.model_mode)
             checkpoint_controller = ClassificationCheckpointer(checkpoint_filename, trainer, parameter_controller,
                                                                resume=self.resume)
 
+            parameter_controller.release_param()
             if self.resume:
                 trainer, parameter_controller = checkpoint_controller.load_checkpoint()
             else:

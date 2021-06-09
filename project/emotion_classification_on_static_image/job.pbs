@@ -55,12 +55,12 @@ cd "$PBS_O_WORKDIR" || exit $?
 
 singularity run --nv --bind ~/scratch/dataset/:/media/ \
         ~/scratch/pth_er.sif python ~/phd2/project/emotion_classification_on_static_image/main.py \
-        -dataset $d -resume $r -factor $f -batch_size $bs -high_performance_cluster 1 \
+        -resume $r  -batch_size $bs -high_performance_cluster 1 \
         -model_load_path "/scratch/users/ntu/su012/pretrained_model" \
-        -dataset_load_path "/scratch/users/ntu/su012/dataset/fer+/cross_entropy" \
+        -dataset_load_path "/scratch/users/ntu/su012/dataset/affectnet/preprocessed" \
         -model_save_path "/scratch/users/ntu/su012/trained_model" \
         -python_package_path "/home/users/ntu/su012/phd2" \
-	    -release_count $rc -stamp $s \
+	    -stamp $s \
         > main_log
 
 ### Let us call the command above as "the long version".

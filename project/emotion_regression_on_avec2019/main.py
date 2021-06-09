@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     # Models
     parser.add_argument('-model_name', default="2dlstm", help='Model: 2d1d, 2dlstm')
-    parser.add_argument('-backbone_state_dict', default="model_state_dict_0.86272", help='The filename for the backbone state dict.')
+    parser.add_argument('-backbone_state_dict', default="res50_ir_hf", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')
     parser.add_argument('-cnn1d_channels', default=[128, 128, 128, 128], nargs="+", type=int, help='The size for each channel')

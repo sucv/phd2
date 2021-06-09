@@ -20,6 +20,7 @@ config_affectnet = {
     "std": [0.5, 0.5, 0.5],
     "num_classes": 8,
     "batch_size": 64,
+    "use_pretrained": True,
     "state_dict_setting": state_dict_setting,
     "use_weighted_sampler": True
 }
