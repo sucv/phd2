@@ -10,10 +10,10 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance computing server or not?')
-    parser.add_argument('-stamp', default='bs16', type=str, help='To indicate different experiment instances') # pretrain_ResVIZ
+    parser.add_argument('-stamp', default='bs64', type=str, help='To indicate different experiment instances') # pretrain_ResVIZ
 
     # Path for Python code, model, datasets
-    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/affectnet/preprocessed', type=str,
+    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/fer+/cross_entropy', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/fer+/preprocessed
     parser.add_argument('-dataset_folder', default='', type=str, help='Useless for image experiment.')  # /scratch/users/ntu/su012/dataset/fer+/preprocessed
     parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load', type=str, help='The path to load the trained model ')  # /scratch/users/ntu/su012/pretrained_model
@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     # Training
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
-    parser.add_argument('-dataset', default="affectnet", help='Dataset: ckplus, oulu, fer2013, ferp, ferp_ce, rafd, rafdb, affectnet')
+    parser.add_argument('-dataset', default="ferp_ce", help='Dataset: ckplus, oulu, fer2013, ferp, ferp_ce, rafd, rafdb, affectnet')
     parser.add_argument('-model_name', default="my_res50_ir", help='The name to specify the model.')
     parser.add_argument('-model_mode', default="ir", help='Mode: ir, ir_se')
     parser.add_argument('-learning_rate', default=1e-2, type=float, help='The initial learning rate.')
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('-topk_accuracy', default=1, type=int, help='Whether the top k inferences covered the label?')
     parser.add_argument('-min_num_epochs', default=10, type=int, help='The minimum epoch to run at least.')
     parser.add_argument('-use_weighted_sampler', default=1, type=int, help='Whether to balance the samples of each classes using weighted sampler?')
-    parser.add_argument('-batch_size', default=32, type=int, help='The batch-size.')
+    parser.add_argument('-batch_size', default=64, type=int, help='The batch-size.')
 
     # Scheduler
     parser.add_argument('-patience', default=30, type=int, help='The number of epoch to run before changing the learning rate.')
