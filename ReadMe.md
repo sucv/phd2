@@ -14,6 +14,7 @@
 
 
 ## Preprocessing<a name="Preprocessing"></a>
+[Return to Table of Content](#Table_of_Content)
 
 The preprocessing is meant to be done in Windows system, with an IDE like PyCharm. The preprocessing do not use GPU so any PC should be okay. 
 
@@ -30,6 +31,7 @@ If file not exist:
 (The processed folder is small in size, and downloading them will not influence the debugging @_@)
 
 #### Environment<a name="PE"></a>
+[Return to Table of Content](#Table_of_Content)
 
 First, establish a anaconda virtual environment by executing the following commands. (Then, you will need to set the Python interpreter accordingly for
  your PyCharm.)
@@ -62,12 +64,14 @@ Third, two paths need to be set.
 Now you are good to go.
 
 #### Feature Extraction and Data Preparation<a name="FEDP"></a>
+[Return to Table of Content](#Table_of_Content)
 
 Run `project/emotion_analysis_on_mahnob_hci/preprocessing.py` using Pycharm, everything shall be done. The code mainly produce the
  cropped and aligned facial images, and their corresponding EEG PSD features and continuous labels for each trial.
  
 
 ## Cross-modal Knowledge Distillation<a name="CKD"></a>
+[Return to Table of Content](#Table_of_Content)
 
 Given the knowledge (features) from the visual modality, the input (PSD) from the EEG modality, and 
 the continuous label of valence, the goal of this project is to improve the consistency of the model predictions and the labels. 
@@ -99,6 +103,7 @@ the continuous label of valence, the goal of this project is to improve the cons
 This part of tasks can be run on command line or Pycharm.
 
 #### Environment<a name="TE"></a>
+[Return to Table of Content](#Table_of_Content)
 
 ```
 conda create -n zs python==3.8
@@ -112,7 +117,9 @@ conda install -c conda-forge tqdm
 conda install -c conda-forge matplotlib
 
 ```
+
 #### Step One, Resnet Backbone Fine-tuning<a name="S1"></a>  
+[Return to Table of Content](#Table_of_Content)
 
 The goal is to train a good Resnet50 for video frame encoding. The code
   to do this is located in `project/emotion_classification_on_static_image/main.py`.
@@ -127,6 +134,7 @@ The Resnet50 is downloaded from [this link](https://github.com/ZhaoJ9014/face.ev
   (To examiner: for debugging purpose, it is okay to omit this step and using the trained backbone directly.)
   
 #### Step Two, Teacher Model Training<a name="S2"></a>
+[Return to Table of Content](#Table_of_Content)
 
 The goal is to train the teacher model using video frame, and save the model parameters for knowledge (feature) extraction.
 
@@ -161,6 +169,7 @@ they are copied and pasted from the same file.).
 Note, the folder `teacher_model_folder` has to be placed in your `model_load_path`.
 
 #### Step Three, Knowledge Extraction<a name="S3"></a>
+[Return to Table of Content](#Table_of_Content)
 
 The goal is to use the trained teacher to extract knowledge.  
 The model will be run on the training data again to extract temporal features, i.e., the output of the TCN or LSTM network, before the regressor.
@@ -182,6 +191,7 @@ Second, run the two code files for trial-wise shuffling and LOSO scenarios, reps
     + `knowledge_folder/knowledge_2d1d_frame_loso/...`.
     
 #### Step Four, Knowledge Distillation<a name="S4"></a>
+[Return to Table of Content](#Table_of_Content)
 
 The goal is to teach EEG psd model using visual knowledge obtained above.
 
