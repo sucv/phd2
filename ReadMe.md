@@ -100,7 +100,15 @@ the continuous label of valence, the goal of this project is to improve the cons
 | w/   KD   | 0.474      |   0.372 |
 | P-value | 0.007      |    0.047 |
 
-This part of tasks can be run on command line or Pycharm.
+This part of tasks can be run on command line or Pycharm. You will noticed that the four arguments
+ 
++ `-dataset_load_path`, the root path of the dataset folder,
++ `-model_load_path`, the root path of model state dictionary and knowledges,
++ `-model_save_path`, the path to save any model state or logs, and
++ `-python_package_path`, the root path of the Python code,
+
+has to be specified for every main function to be ran. 
+
 
 #### Environment<a name="TE"></a>
 [Return to Table of Content](#Table_of_Content)
@@ -178,8 +186,8 @@ A whole video will be fed into the trained teacher model, producing the features
 
 The code to do so is located in :
 
-    + `project/emotion_analysis_on_mahnob_hci/regression/knowledge_distillation_offline/extract_knowledge_trial`
-    + `project/emotion_analysis_on_mahnob_hci/regression/knowledge_distillation_offline/extract_knowledge_LOSO`
++ `project/emotion_analysis_on_mahnob_hci/regression/knowledge_distillation_offline/extract_knowledge_trial`
++ `project/emotion_analysis_on_mahnob_hci/regression/knowledge_distillation_offline/extract_knowledge_LOSO`
     
 
 First, please specify `dataset_load_path`, `model_load_path`, `model_save_path`, `python_package_path` accordingly. Note, the folder `teacher_model_folder` has to be placed in your `model_load_path`.
@@ -187,8 +195,8 @@ First, please specify `dataset_load_path`, `model_load_path`, `model_save_path`,
 Second, run the two code files for trial-wise shuffling and LOSO scenarios, repsectively. They will generate two folders containing 
  the extracted knowledge (feature):
     
-    + `knowledge_folder/knowledge_2d1d_frame_trial/...`,
-    + `knowledge_folder/knowledge_2d1d_frame_loso/...`.
++ `knowledge_folder/knowledge_2d1d_frame_trial/...`,
++ `knowledge_folder/knowledge_2d1d_frame_loso/...`.
     
 #### Step Four, Knowledge Distillation<a name="S4"></a>
 [Return to Table of Content](#Table_of_Content)
