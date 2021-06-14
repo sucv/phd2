@@ -86,14 +86,14 @@ the continuous label of valence, the goal of this project is to improve the cons
   
   | Scenario 1        | PCC           | CCC  |
 | ------------- |:-------------:| -----:|
-| w/o      | 0.400 | 0.378 |
-| w/      | 0.412      |   0.387 |
+| w/o KD     | 0.400 | 0.378 |
+| w/  KD    | 0.412      |   0.387 |
 | P-value | 0.01      |    0.034 |
 
   | Scenario 2        | PCC           | CCC  |
 | ------------- |:-------------:| -----:|
-| w/o      | 0.464 | 0.363 |
-| w/      | 0.474      |   0.372 |
+| w/o  KD    | 0.464 | 0.363 |
+| w/   KD   | 0.474      |   0.372 |
 | P-value | 0.007      |    0.047 |
 
 This part of tasks can be run on command line or Pycharm.
