@@ -45,6 +45,9 @@ class GenericCheckpointer(object):
 
 
 class ClassificationCheckpointer(GenericCheckpointer):
+    r"""
+    Write training logs into csv files.
+    """
     def __init__(self, path, trainer, parameter_controller, resume):
         super().__init__(path, trainer, parameter_controller, resume)
         self.columns = []

@@ -138,6 +138,7 @@ class L1(nn.Module):
 
         return loss
 
+
 class L1S(nn.Module):
     """
 	FitNets: Hints for Thin Deep Nets

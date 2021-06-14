@@ -1,3 +1,4 @@
+import os
 
 config_knowledge_distillation = {
     "2d1d": {
@@ -7,8 +8,9 @@ config_knowledge_distillation = {
         "cnn1d_channels": [128, 128, 128, 128],
         "cnn1d_kernel_size": 5,
         "cnn1d_dropout": 0.1,
-        "teacher_frame_model_state_folder": "trained_2d1d_frame",
-        "teacher_knowledge_save_folder": "knowledge_2d1d_frame"
+        "teacher_frame_model_state_folder": os.path.join("teacher_model_folder", "model"),
+        "teacher_knowledge_save_folder": os.path.join("knowledge_folder", "knowledge_2d1d_frame"),
+        "student_frame_backbone_state_folder": "backbone_frame",
     },
     "resnet": {
         "model_name": "resnet",
@@ -22,6 +24,5 @@ config_knowledge_distillation = {
         "lstm_hidden_dim": 256,
         "lstm_dropout": 0.4,
         "teacher_model_state_folder": "trained_2dlstm_frame"
-    },
-    "knowledge_folder": "emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame"
+    }
 }

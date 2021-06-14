@@ -20,27 +20,44 @@ class GenericParamControl(object):
 
 
 class ResnetParamControl(GenericParamControl):
+    r""""
+    It controls what layers to release.
+    """
     def __init__(self, trainer, gradual_release=1, release_count=8, backbone_mode="ir"):
+        # It effects the model and optimizer of trainer.
         self.trainer = trainer
+
+        # 0 to disable the gradual release.
         self.gradual_release = gradual_release
+
+        # How many times to release.
         self.release_count = release_count
+
+        # The backbone mode of the Resnet, usually ir or ir_se.
         self.backbone_mode = backbone_mode
+
+        # The layer indices to be grouped. One group will be released at a time.
         self.module_list = self.init_module_list()
+
+        # Obtain the parameters according to the indices.
         self.module_stack = self.init_param_group()
+
+        # A flag indicating whether to halt the trainer.
         self.early_stop = False
 
     def init_module_list(self):
 
+        # 4-10 are the output layers. 163-187 are the fourth block of Resnet 50. 142-163 are half of the third block of Resnet 50.
         module_list = [[(4, 10)], [(163, 187)], [(142, 163)]]
+
+        # ir_se has extra squeeze-excitation layer so that it has more layers.
         if self.backbone_mode == "ir_se":
             module_list = [[(4, 10)], [(205, 235)], [(187, 205)]]
 
         return module_list
 
     def init_param_group(self):
-        # return {'0': slice(151, 160), '1': slice(160, 169), '2': slice(169, 178),
-        #         '3': slice(178, 187), '4': slice(187, 196), '5': slice(196, 205),
-        #         '6': slice(205, 235), '7': slice(4, 10)}
+        # Get the parameters according to the module list.
         module_stack = []
         for groups in self.module_list:
             slice_range = []
@@ -54,6 +71,7 @@ class ResnetParamControl(GenericParamControl):
         return module_stack
 
     def get_param_group(self):
+        # Pop out the last element of the stack.
         modules_to_release = self.module_stack.pop(0)
         return modules_to_release
 
@@ -76,4 +94,6 @@ class ResnetParamControl(GenericParamControl):
                 self.early_stop = True
 
     def load_trainer(self, trainer):
+
+        # If started from a checkpoint, then load the trainer.
         self.trainer = trainer

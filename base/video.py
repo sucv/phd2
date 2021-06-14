@@ -136,7 +136,7 @@ def combine_annotated_clips(
     output_video_list = []
 
     print("combining annotated clips...")
-    for video_idx, input_video_name in tqdm(enumerate(videos)):
+    for video_idx, input_video_name in tqdm(enumerate(videos), total=len(videos)):
 
         # Define the new file name by adding the tag at the rear before the extension.
         output_video_name = input_video_name[:-4] + '_combined' + input_video_name[-4:]

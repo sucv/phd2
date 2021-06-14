@@ -5,19 +5,8 @@ import pickle
 import pandas as pd
 import cv2
 import numpy as np
-import torch
-from torch.utils.data import WeightedRandomSampler
 
 
-def init_weighted_sampler_and_weights(dataset):
-    class_sample_count = np.unique(dataset.targets, return_counts=True)[1]
-    weight = 1. / class_sample_count
-
-    samples_weight = weight[dataset.targets]
-    samples_weight = torch.from_numpy(samples_weight)
-
-    sampler = WeightedRandomSampler(weights=samples_weight.type('torch.DoubleTensor'), num_samples=len(samples_weight))
-    return sampler, samples_weight
 
 
 def dict_combine(main_dict, new_dict):
@@ -94,6 +83,7 @@ def get_filename_from_a_folder_given_extension(folder, extension):
 
 
 def detect_device():
+    import torch
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = torch.device('cuda:1')
     return device
@@ -105,6 +95,7 @@ def select_gpu(index):
     :param index: (int), the index corresponding to the desired gpu. For example,
         0 means the 1st gpu.
     """
+    import torch
     torch.cuda.set_device(index)
 
 
@@ -113,4 +104,5 @@ def set_cpu_thread(number):
     Set the maximum thread of cpu for torch module.
     :param number: (int), the number of thread allowed, usually 1 is enough.
     """
+    import torch
     torch.set_num_threads(number)

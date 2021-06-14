@@ -37,13 +37,14 @@ class MahnobResnetKnowledgeDistillationTrainer(ClassificationTrainer):
             print("-------")
             print("Starting training, on device:", self.device)
 
-        self.best_epoch_info = {
-            'model_weights': copy.deepcopy(self.model.state_dict()),
-            'loss': 1e10,
-            'acc': 0,
-            'epoch': 0,
-            'kappa': -1,
-        }
+        if self.best_epoch_info is not None:
+            self.best_epoch_info = {
+                'model_weights': copy.deepcopy(self.model.state_dict()),
+                'loss': 1e10,
+                'acc': 0,
+                'epoch': 0,
+                'kappa': -1,
+            }
 
         start_epoch = self.start_epoch
 

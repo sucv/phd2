@@ -1,17 +1,15 @@
 from base.experiment import GenericExperiment
-from models.model import my_2d1d, my_2dlstm
+
 from models.knowledge_distillation_model import kd_2d1d, kd_res50
 from base.dataset import NFoldMahnobArrangerTrial, MAHNOBDatasetTrial
-from base.checkpointer import ClassificationCheckpointer as Checkpointer
+
 from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.trainer import \
     MAHNOBFeatureExtractorTrainerTrial
-from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.parameter_control import \
-    ParamControl
 
-from base.loss_function import CCCLoss, SoftTarget, CC, Hint
+
+
 
 import os
-from operator import itemgetter
 
 import numpy as np
 import torch
@@ -61,10 +59,21 @@ class KnowledgeExtractorTrial(GenericExperiment):
 
         self.device = self.init_device()
 
+
+
+        if self.debug:
+            self.folds_to_run = [0, 1, 2]
+            self.num_folds = 3
+            self.num_epochs = 1
+
     def load_config(self):
         from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
         from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.configs import \
             config_knowledge_distillation as kd_config
+
+        if self.debug:
+            from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.configs_debug import \
+                config_knowledge_distillation as kd_config
 
         config = {
             'generic_config': config,
@@ -88,6 +97,8 @@ class KnowledgeExtractorTrial(GenericExperiment):
 
     def init_partition_setting(self):
         partition_setting = {'train': 239}
+        if self.debug:
+            partition_setting = {'train': 6}
         return partition_setting
 
     def init_dataloader(self, partition_setting, trial_id_of_all_folds, fold_arranger, fold, class_labels=None):
@@ -96,6 +107,9 @@ class KnowledgeExtractorTrial(GenericExperiment):
         # Each fold have approximately the same number of sessions.
 
         trial_index = np.roll(trial_id_of_all_folds, 24 * fold)
+        if self.debug:
+            trial_index = np.roll(trial_id_of_all_folds, 2 * fold)
+
         trial_id_of_all_partitions = fold_arranger.assign_trial_to_partition(trial_index)
         data_dict, normalize_dict = fold_arranger.make_data_dict(trial_id_of_all_partitions)
 
@@ -129,8 +143,6 @@ class KnowledgeExtractorTrial(GenericExperiment):
 
         trial_id_of_all_partitions = fold_arranger.get_trial_indices_having_continuous_label()
 
-        criterion = {'hint': Hint()}
-
         model = self.create_model()
 
         # Here goes the N-fold training.
@@ -147,10 +159,10 @@ class KnowledgeExtractorTrial(GenericExperiment):
                                                                     fold_arranger, fold)
 
             trainer = MAHNOBFeatureExtractorTrainerTrial(model, model_name=self.model_name,
-                                                         save_path=fold_save_path, criterion=criterion, num_classes=8,
+                                                         save_path=fold_save_path, criterion=None, num_classes=8,
                                                          device=self.device, )
 
-            feature_save_path = os.path.join(self.model_load_path, self.model_name,
+            feature_save_path = os.path.join(self.model_load_path,
                                              self.config['kd_config']['2d1d']['teacher_knowledge_save_folder'] + "_trial",
                                              str(fold))
 
@@ -165,7 +177,7 @@ if __name__ == '__main__':
     crop_size = 40
 
     parser = argparse.ArgumentParser(description='Say hello')
-    parser.add_argument('-experiment_name', default="emo_kd", help='The experiment name.')
+    parser.add_argument('-experiment_name', default="debug", help='The experiment name.')
     parser.add_argument('-gpu', default=0, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
@@ -173,15 +185,17 @@ if __name__ == '__main__':
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
+    parser.add_argument('-debug', default=1, type=str, help='When debug=1, the fold number will be fixed to 3, because there are three subjects'
+                                                            'in the debug dataset.')
 
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
     parser.add_argument('-folds_to_run', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
-    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
+    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/Mahnob_debug', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
     parser.add_argument('-dataset_folder', default='compacted_{:d}'.format(frame_size), type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
-    parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load', type=str,
+    parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load/model_load_path', type=str,
                         help='The path to load the trained model.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', default='/home/zhangsu/phd2/save', type=str,
                         help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model

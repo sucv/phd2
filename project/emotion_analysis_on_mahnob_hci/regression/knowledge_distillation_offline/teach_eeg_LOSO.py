@@ -90,10 +90,19 @@ class TeacherEEG1D(GenericExperiment):
 
         self.device = self.init_device()
 
+        if self.debug:
+            self.folds_to_run = [0, 1, 2]
+            self.num_folds = 3
+            self.num_epochs = 1
+
     def load_config(self):
         from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
         from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.configs import \
             config_knowledge_distillation as kd_config
+
+        if self.debug:
+            from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.configs_debug import \
+                config_knowledge_distillation as kd_config
 
         config = {
             'generic_config': config,
@@ -116,6 +125,8 @@ class TeacherEEG1D(GenericExperiment):
 
     def init_partition_dictionary(self):
         partition_dictionary = {'train': 23, 'validate': 0, 'test': 1}
+        if self.debug:
+            partition_dictionary = {'train': 1, 'validate': 1, 'test': 1}
         return partition_dictionary
 
     def combine_trial_for_partition(self, subject_id_of_all_folds, trial_id_to_subject_dict):

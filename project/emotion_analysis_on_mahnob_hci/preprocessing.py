@@ -117,7 +117,7 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
 
     def create_npy_for_frame(self):
 
-        for i, folder in tqdm(enumerate(range(self.session_number))):
+        for i, folder in tqdm(enumerate(range(self.session_number)), total=self.session_number):
             npy_directory = self.dataset_info['npy_output_folder'][i]
             folder = self.dataset_info['processed_folder'][i] + "_aligned"
             os.makedirs(npy_directory, exist_ok=True)
@@ -136,7 +136,7 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
     def create_npy_for_continuous_label(self):
 
         pointer = 0
-        for i, folder in tqdm(enumerate(range(self.session_number))):
+        for i, folder in tqdm(enumerate(range(self.session_number)), total=self.session_number):
             if self.dataset_info['having_continuous_label'][i]:
                 npy_directory = self.dataset_info['npy_output_folder'][i]
                 os.makedirs(npy_directory, exist_ok=True)
@@ -189,10 +189,12 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
 
         for index in range(len(sessions_having_continuous_label)):
             subject, trial = sessions_having_continuous_label[index]
-            start_idx = np.where(self.dataset_info['subject_id'] == subject)[0]
-            offset = np.where(self.dataset_info['trial_id'][start_idx] == trial)[0][0]
 
-            self.dataset_info['having_continuous_label'][start_idx[offset]] = 1
+            start_idx = np.where(self.dataset_info['subject_id'] == subject)[0]
+            if len(start_idx) != 0:
+                offset = np.where(self.dataset_info['trial_id'][start_idx] == trial)[0][0]
+
+                self.dataset_info['having_continuous_label'][start_idx[offset]] = 1
 
     def get_eeg_bool(self):
         r"""
@@ -360,6 +362,8 @@ class PreprocessingMAHNOBHCI(GenericVideoPreprocessing):
                 output_eeg_image_file = os.path.join(output_directory, "eeg_image.npy")
 
                 if self.eeg_feature_extraction:
+                    # In addition to the EEG data relevant to the continuous labels, an extra length equalling 5s is sampled.
+                    # So that it can ensure that the length of each EEG sample will not lack one or to data point.
                     eeg_handler = EegMahnob(
                         eeg_bdf_list[pointer], buffer=5, electrode_2d_pos=self.eeg_electrode_2d_coordinates,
                         eeg_image_size=self.config['crop_size'], eeg_feature_list=self.eeg_feature_list)

@@ -81,9 +81,15 @@ class Experiment(GenericExperiment):
         self.emotion_dimension = args.emotion_dimension
         self.metrics = args.metrics
 
+        self.debug = args.debug
         self.save_plot = args.save_plot
 
         self.device = self.init_device()
+
+        if self.debug:
+            self.folds_to_run = [0, 1, 2]
+            self.num_folds = 3
+            self.num_epochs = 1
 
     def load_config(self):
         from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
@@ -140,6 +146,9 @@ class Experiment(GenericExperiment):
     def init_partition_setting(self):
         # partition_setting = {'train': 168, 'validate': 47, 'test': 24}
         partition_setting = {'train': 129, 'validate': 86, 'test': 24}
+        if self.debug:
+            partition_setting = {'train': 3, 'validate': 2, 'test': 1}
+
         return partition_setting
 
     def init_dataloader(self, partition_setting, trial_id_of_all_folds, fold_arranger, fold, class_labels=None):

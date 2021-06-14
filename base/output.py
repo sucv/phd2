@@ -49,6 +49,7 @@ class ContinuousOutputHandlerNPYTrial(object):
         trial_record = {emotion: [[] for i in range(length)] for emotion in self.emotion_dimension}
         return trial_record
 
+
 class ContinuousOutputHandlerNPY(object):
     def __init__(self, length_to_track, emotion_dimension):
         self.length_to_track = length_to_track
@@ -250,6 +251,7 @@ class PlotHandler(object):
         fig.tight_layout()
         plt.savefig(full_plot_filename)
         plt.close()
+
 
 class PlotHandlerTrial(object):
     r"""

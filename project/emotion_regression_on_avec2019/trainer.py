@@ -93,11 +93,13 @@ class AVEC2019Trainer(GenericTrainer):
 
         self.time_fit_start = time.time()
         start_epoch = self.start_epoch
-        self.best_epoch_info = {
-            'model_weights': copy.deepcopy(self.model.state_dict()),
-            'loss': 1e10,
-            'ccc': -1e10
-        }
+
+        if self.best_epoch_info is not None:
+            self.best_epoch_info = {
+                'model_weights': copy.deepcopy(self.model.state_dict()),
+                'loss': 1e10,
+                'ccc': -1e10
+            }
 
         # Loop the epochs
         for epoch in np.arange(start_epoch, num_epochs):

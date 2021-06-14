@@ -78,6 +78,7 @@ class Experiment(GenericExperiment):
         self.emotion_dimension = args.emotion_dimension
         self.metrics = args.metrics
 
+        self.debug = args.debug
         self.save_plot = args.save_plot
 
         self.device = self.init_device()

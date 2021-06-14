@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Say hello')
     parser.add_argument('-experiment_name', default="avec2019_regression", help='The experiment name.')
-    parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
+    parser.add_argument('-gpu', default=2, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
     parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
 
     # Models
-    parser.add_argument('-model_name', default="2dlstm", help='Model: 2d1d, 2dlstm')
+    parser.add_argument('-model_name', default="2d1d", help='Model: 2d1d, 2dlstm')
     parser.add_argument('-backbone_state_dict', default="res50_ir_hf", help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_mode', default="ir", help='Mode for resnet50 backbone: ir, ir_se')
     parser.add_argument('-cnn1d_embedding_dim', default=512, type=int, help='Dimensions for temporal convolutional networks feature vectors.')

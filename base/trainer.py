@@ -12,6 +12,19 @@ from torch.nn import MSELoss
 import torch.utils.data
 from sklearn.metrics import accuracy_score, cohen_kappa_score
 
+from torch.utils.data import WeightedRandomSampler
+
+
+def init_weighted_sampler_and_weights(dataset):
+    class_sample_count = np.unique(dataset.targets, return_counts=True)[1]
+    weight = 1. / class_sample_count
+
+    samples_weight = weight[dataset.targets]
+    samples_weight = torch.from_numpy(samples_weight)
+
+    sampler = WeightedRandomSampler(weights=samples_weight.type('torch.DoubleTensor'), num_samples=len(samples_weight))
+    return sampler, samples_weight
+
 
 class GenericTrainer(object):
 
@@ -113,7 +126,6 @@ class ClassificationTrainer(GenericTrainer):
                          early_stopping=early_stopping, factor=factor,
                          max_epoch=max_epoch, patience=patience, verbose=verbose, **kwargs)
 
-        # The networks.
         self.save_path = save_path
         os.makedirs(self.save_path, exist_ok=True)
 
@@ -121,10 +133,10 @@ class ClassificationTrainer(GenericTrainer):
         self.milestone = milestone
         self.modality = modality
 
-        # parameter_control
         self.fit_finished = False
         self.fold_finished = False
         self.resume = False
+
         self.train_losses = []
         self.validate_losses = []
         self.train_accuracies = []
@@ -133,6 +145,7 @@ class ClassificationTrainer(GenericTrainer):
         self.validate_kappas = []
         self.train_confusion_matrices = []
         self.validate_confusion_matrices = []
+
         self.test_accuracy = -1
         self.test_kappa = -1
         self.test_confusion_matrix = 0
@@ -182,11 +195,12 @@ class ClassificationTrainer(GenericTrainer):
             print("-------")
             print("Starting training, on device:", self.device)
 
-        self.best_epoch_info = {
-            'model_weights': copy.deepcopy(self.model.state_dict()),
-            'loss': 1e10,
-            'acc': 0,
-        }
+        if self.best_epoch_info is not None:
+            self.best_epoch_info = {
+                'model_weights': copy.deepcopy(self.model.state_dict()),
+                'loss': 1e10,
+                'acc': 0,
+            }
 
         start_epoch = self.start_epoch
 
@@ -199,6 +213,7 @@ class ClassificationTrainer(GenericTrainer):
 
             time_epoch_start = time.time()
 
+            # For ReduceOnPlateau scheduler.
             # if epoch == 0 or parameter_controller.get_current_lr() < self.min_learning_rate:
             #
             #     parameter_controller.release_param()
@@ -207,6 +222,7 @@ class ClassificationTrainer(GenericTrainer):
             #     if parameter_controller.early_stop:
             #         break
 
+            # For multistep scheduler.
             if epoch in self.milestone:
                 self.reduce_lr()
 
@@ -314,11 +330,13 @@ class ClassificationTrainer(GenericTrainer):
             if 'frame' in X:
                 inputs = X['frame'].to(self.device)
 
-            if 'eeg_image' in X:
+            elif 'eeg_image' in X:
                 inputs = X['eeg_image'].to(self.device)
 
-            if 'eeg_raw' in X:
+            elif 'eeg_raw' in X:
                 inputs = X['eeg_raw'].to(self.device)
+            else:
+                raise ValueError("Unknown modality!")
 
             labels = torch.squeeze(Y.long().to(self.device))
 
@@ -327,6 +345,7 @@ class ClassificationTrainer(GenericTrainer):
 
             outputs = self.model(inputs)
 
+            # Restore the dimension to batch x example if batch == 1.
             if len(inputs) == 1:
                 labels = labels.unsqueeze(0)
                 outputs = outputs.unsqueeze(0)

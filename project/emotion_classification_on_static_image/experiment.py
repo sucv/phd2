@@ -1,5 +1,5 @@
 from base.experiment import GenericExperiment
-from base.utils import init_weighted_sampler_and_weights
+from base.trainer import init_weighted_sampler_and_weights
 from base.loss_function import FocalLoss, CrossEntropyLoss
 from project.emotion_classification_on_static_image.dataset import CKplusArranger, OuluArranger, RafdArranger, \
     EmotionalStaticImgClassificationDataset, FerplusCrossEntropyClassificationDataset
@@ -58,7 +58,7 @@ class Experiment(GenericExperiment):
 
         state_dict_name = self.config['state_dict_setting'][self.model_mode]
         model = my_res50(root_dir=self.model_load_path, num_classes=self.config['num_classes'], mode=self.model_mode,
-                         use_pretrained=self.config['use_pretrained'], state_dict_name=state_dict_name, fix_backbone=True)
+                         use_pretrained=self.config['use_pretrained'], state_dict_name=state_dict_name, fix_backbone=False)
         return model
 
     def load_config(self):

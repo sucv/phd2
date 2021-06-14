@@ -111,6 +111,7 @@ class kd_2d1d(my_2d1d):
                 param.requires_grad = False
 
         self.avg_pool = AvgPool1d(kernel_size=16, stride=16)
+
     def forward(self, x):
         knowledges = {}
         num_batches, length, channel, width, height = x.shape

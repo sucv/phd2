@@ -283,7 +283,7 @@ class my_2d1d(nn.Module):
         x = x.contiguous().view(num_batches * length, -1)
         x = self.regressor(x)
         x = x.view(num_batches, length, -1)
-        return x, 0
+        return x
 
 
 class my_2dlstm(nn.Module):

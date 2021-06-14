@@ -4,7 +4,8 @@ from base.dataset import NFoldMahnobArranger, MAHNOBDatasetCls
 from base.checkpointer import ClassificationCheckpointer
 from base.trainer import ClassificationTrainer
 from project.emotion_analysis_on_mahnob_hci.classification.parameter_control import ParamControl
-from base.utils import load_single_pkl, init_weighted_sampler_and_weights
+from base.utils import load_single_pkl
+from base.trainer import  init_weighted_sampler_and_weights
 
 import os
 from operator import itemgetter

@@ -57,7 +57,8 @@ class ImageEmoClassificationNFoldArranger(object):
 
 class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
     r"""
-    A class to prepare files according to the n-fold manner.
+    A class to prepare files according to the n-fold manner. All the trials are shuffled first, and then evenly separate to n-fold.
+        Each fold contains trials from 1 or more subjects.  Subjects CAN overlap among folds.
     """
 
     def __init__(self, dataset_load_path, dataset_folder, modality, normalize_eeg_raw=True, num_electrodes=32, window_sec=24, hop_size_sec=8, continuous_label_frequency=4,
@@ -74,7 +75,7 @@ class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
         self.num_electrodes = num_electrodes
         self.normalize_eeg_raw = normalize_eeg_raw
 
-        # Regression or Classification?
+        # Exclude trials having no continuous label.
         self.include_session_having_no_continuous_label = include_session_having_no_continuous_label
 
         self.depth = window_sec * continuous_label_frequency
@@ -96,6 +97,8 @@ class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
         Get the session indices having continuous labels.
         :return: (list), the indices indicating which sessions have continuous labels.
         """
+
+        # If include trial
         if self.include_session_having_no_continuous_label:
             indices = np.where(np.asarray(self.dataset_info['having_eeg']) == 1)[0]
         else:
@@ -123,10 +126,14 @@ class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
 
             trial_indices = trial_id_of_a_partition
 
-            length_list = list(itemgetter(*trial_indices)(self.dataset_info['refined_processed_length']))
-            trial_name_list = list(itemgetter(*trial_indices)(self.dataset_info['session_name']))
+            if len(trial_indices) == 1:
+                length_list = [self.dataset_info['refined_processed_length'][int([trial_indices][0])]]
+                trial_name_list = [self.dataset_info['session_name'][int([trial_indices][0])]]
+            else:
+                length_list = list(itemgetter(*trial_indices)(self.dataset_info['refined_processed_length']))
+                trial_name_list = list(itemgetter(*trial_indices)(self.dataset_info['session_name']))
             directory_list = [os.path.join(self.root_directory, self.npy_folder, session_name) for
-                              session_name in trial_name_list]
+                                  session_name in trial_name_list]
 
             for i in range(len(trial_indices)):
                 trial_name = trial_name_list[i]
@@ -209,7 +216,8 @@ class NFoldMahnobArrangerTrial(VideoEmoRegressionArranger):
 
 class NFoldMahnobArranger(VideoEmoRegressionArranger):
     r"""
-    A class to prepare files according to the n-fold manner.
+    A class to prepare files according to the n-fold manner. A fold contains trials from 1 or more subjects.
+        No subject overlap among folds.
     """
 
     def __init__(self, dataset_load_path, dataset_folder, modality, normalize_eeg_raw=True, num_electrodes=32, window_sec=24, hop_size_sec=8, continuous_label_frequency=4, include_session_having_no_continuous_label=True, feature_extraction=False):
@@ -254,6 +262,10 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         return indices
 
     def make_data_dict(self, subject_id_of_all_folds, partition_dictionary):
+        r"""
+        To generate the dictionary containing path, window indices, trial names, and so on.
+            Each element in the dictionary is a data point, it tells the Dataset class where and what to load the data.
+        """
 
         # Get the partition-wise subject dictionary.
         subject_id_of_all_partitions = self.partition_train_validate_test_for_subjects(
@@ -261,7 +273,6 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
         # Initialize the dictionary to be outputed.
         data_dict = {key: [] for key in subject_id_of_all_partitions}
-
 
         normalize_dict = {key: {} for key in subject_id_of_all_partitions}
 
@@ -311,11 +322,13 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
                                 eeg_raw_path_list.append(eeg_raw_path)
 
                             if self.feature_extraction:
+                                # During which, a whole trial is fed to the model for convenience, so that the depth
+                                # equals the trial length.
                                 depth = length
                             else:
+                                # Otherwise, load data according to the window size.
                                 depth = self.depth
                             num_windows = int(np.ceil((length - depth) / self.step_size)) + 1
-
 
                             for window in range(num_windows):
                                 start = window * self.step_size
@@ -324,10 +337,16 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
                                 if end > length:
                                     break
 
+                                # Relative and absolute indices are used for:
+                                #   1) plot the trial-wise output-label trace figures.
+                                #   2) calculate the evaluation metrics on the output-label pair.
+                                #   To do so, the window-resampled output must be restored to a complete trial (for plotting),
+                                #       and then all the output of trials will be concatenated to be one single vector as the partition output (for evaluation).
                                 relative_indices = np.arange(start, end)
                                 absolute_indices = relative_indices + initial_index_relative_to_this_subject
                                 data_of_a_modal.append([trial_directory, absolute_indices, relative_indices, session_name])
 
+                            # Make sure no data are omitted.
                             if (length - depth) % self.step_size != 0:
                                 start = length - depth
                                 end = length
@@ -478,6 +497,10 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
         """
 
         # To assure that the fold number equals the value sum of the partition dictionary.
+        # "partition_dictionary" is set by the user, while "subject_id_of_all_folds" is generated according to the
+        # evaluation of subject-wise trial number. They should be equal.
+        # For example, partition_dictionary = {train: 6, val: 3, test:1} has ten folds. So that the list subject_id_of_all_folds
+        #   should also contain 10 elements.
         assert len(subject_id_of_all_folds) == np.sum([value for value in partition_dictionary.values()])
 
         # Assign the subject id according to the dictionary.
@@ -493,7 +516,7 @@ class NFoldMahnobArranger(VideoEmoRegressionArranger):
 
 class NFoldMahnobArrangerLOSO(VideoEmoRegressionArranger):
     r"""
-    A class to prepare files according to the n-fold manner.
+    A class to prepare files according to the Leave-one-subject-out manner.
     """
 
     def __init__(self, dataset_load_path, dataset_folder, modality, normalize_eeg_raw=True, num_electrodes=32, window_sec=24, hop_size_sec=8, continuous_label_frequency=4, include_session_having_no_continuous_label=True, feature_extraction=False):
@@ -733,6 +756,7 @@ class NFoldMahnobArrangerLOSO(VideoEmoRegressionArranger):
 
         return subject_id_of_all_partitions
 
+
 class MAHNOBDatasetCls(Dataset):
     def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'],
                  continuous_label_frequency=4,
@@ -883,6 +907,7 @@ class MAHNOBDatasetCls(Dataset):
 
         return features, labels, absolute_indices, session
 
+
 class MAHNOBDataset(Dataset):
     def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'], continuous_label_frequency=4,
                  eegnet_window_sec=2, eegnet_stride_sec=0.25, frame_size=48, crop_size=40, normalize_eeg_raw=0,
@@ -971,6 +996,7 @@ class MAHNOBDataset(Dataset):
             indices = indices * self.ratio['frame'] + x
             return indices
         else:
+            # In order to extract the frame-wise features, the indices cannot be downsampled.
             non_downsampled_indices = np.empty(0,)
             for x in range(self.ratio['frame']):
                 indices = origin_indices * self.ratio['frame'] + x
@@ -1054,6 +1080,7 @@ class MAHNOBDataset(Dataset):
             labels = self.class_label[session]["Valence"]
 
         return features, labels, absolute_indices, session
+
 
 class MAHNOBDatasetTrial(Dataset):
     def __init__(self, config, data_list, normalize_dict=None, modality=['frame'], emotion_dimension=['Valence'], continuous_label_frequency=4,

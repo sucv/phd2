@@ -62,10 +62,19 @@ class KnowledgeExtractor(GenericExperiment):
 
         self.device = self.init_device()
 
+        if self.debug:
+            self.folds_to_run = [0, 1, 2]
+            self.num_folds = 3
+            self.num_epochs = 1
+
     def load_config(self):
         from project.emotion_analysis_on_mahnob_hci.configs import config_mahnob as config
         from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.configs import \
             config_knowledge_distillation as kd_config
+
+        if self.debug:
+            from project.emotion_analysis_on_mahnob_hci.regression.knowledge_distillation_offline.configs_debug import \
+                config_knowledge_distillation as kd_config
 
         config = {
             'generic_config': config,
@@ -90,6 +99,8 @@ class KnowledgeExtractor(GenericExperiment):
 
     def init_partition_dictionary(self):
         partition_dictionary = {'train': 23, 'validate': 0, 'test': 1}
+        if self.debug:
+            partition_dictionary = {'train': 1, 'validate': 1, 'test': 1}
         return partition_dictionary
 
     def combine_trial_for_partition(self, subject_id_of_all_folds, trial_id_to_subject_dict):
@@ -169,13 +180,13 @@ class KnowledgeExtractor(GenericExperiment):
                                                          save_path=fold_save_path, criterion=criterion, num_classes=8,
                                                          device=self.device, )
 
-            feature_save_path = os.path.join(self.model_load_path, self.model_name,
+            feature_save_path = os.path.join(self.model_load_path,
                                              self.config['kd_config']['2d1d']['teacher_knowledge_save_folder'] + "_loso",
                                              str(fold))
 
-            trainer.validate(dataloaders_dict['test'], feature_save_path=feature_save_path)
+            trainer.validate(dataloaders_dict['train'], feature_save_path=feature_save_path)
 
-            # trainer.validate(dataloaders_dict['validate'], feature_save_path=feature_save_path)
+            trainer.validate(dataloaders_dict['validate'], feature_save_path=feature_save_path)
 
 
 import sys
@@ -194,15 +205,17 @@ if __name__ == '__main__':
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['frame'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
+    parser.add_argument('-debug', default=1, type=str, help='When debug=1, the fold number will be fixed to 3, because there are three subjects'
+                                                            'in the debug dataset.')
 
     parser.add_argument('-num_folds', default=24, type=int, help="How many folds to consider?")
     parser.add_argument('-folds_to_run', default=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23], nargs="+", type=int, help='Which fold(s) to run in this session?')
 
-    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
+    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/Mahnob_debug', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
     parser.add_argument('-dataset_folder', default='compacted_{:d}'.format(frame_size), type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
-    parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load', type=str,
+    parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load/model_load_path', type=str,
                         help='The path to load the trained model.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', default='/home/zhangsu/phd2/save', type=str,
                         help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model
@@ -215,7 +228,6 @@ if __name__ == '__main__':
     parser.add_argument('-teacher_model_name', default="2d1d", help='2d1d, 2dlstm (not trained)')
     parser.add_argument('-teacher_modality', default="visual", help='visual, eeg_image')
     parser.add_argument('-student_model_name', default="2d1d", help='2d1d, 2dlstm (not trained)')
-    parser.add_argument('-student_modality', default="eeg_image", help='visual, eeg_image')
     parser.add_argument('-knowledges', default=['logit', 'hint', 'nst', 'pkt', 'cc'], nargs="*",
                         help='frame, eeg_image')
 

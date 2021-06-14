@@ -5,7 +5,7 @@ frame_size = 48
 crop_size = 40
 
 config_mahnob = {
-    "local_root_directory": r"E:\Mahnob_full",  # Local root for data preprocessing.
+    "local_root_directory": r"E:\Mahnob_debug",  # Local root for data preprocessing.
     "raw_data_folder": "Sessions",
     "openface_output_folder": "processed_{:d}".format(frame_size),
     "npy_folder": "compacted_{:d}".format(frame_size),

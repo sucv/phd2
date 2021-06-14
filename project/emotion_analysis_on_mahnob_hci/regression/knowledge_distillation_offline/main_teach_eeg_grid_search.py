@@ -10,12 +10,15 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', default=1, type=int, help='Which gpu to use?')
     parser.add_argument('-cpu', default=1, type=int, help='How many threads are allowed?')
     parser.add_argument('-high_performance_cluster', default=0, type=int, help='On high-performance server or not?')
-    parser.add_argument('-stamp', default='test', type=str, help='To indicate different experiment instances')
+    parser.add_argument('-stamp', default='debug_dy', type=str, help='To indicate different experiment instances')
     parser.add_argument('-dataset', default='mahnob_hci', type=str, help='The dataset name.')
     parser.add_argument('-modality', default=['eeg_psd'], nargs="*", help='frame, eeg_image')
     parser.add_argument('-resume', default=0, type=int, help='Resume from checkpoint?')
+    parser.add_argument('-debug', default=1, type=str,
+                        help='When debug=1, the fold number will be fixed to 3, because there are three subjects'
+                             'in the debug dataset.')
 
-    parser.add_argument('-case', default='loso', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
+    parser.add_argument('-case', default='trial', type=str, help='trial, sub_ind (n-fold cv), loso. The data splitting scenarios. The minimum'
                                                                 'unit for shuffling is trial, subject, and subject for the three options, respectively.')
     parser.add_argument('-num_folds', default=10, type=int, help="How many folds to consider?")
     parser.add_argument('-folds_to_run', default=[0], nargs="+", type=int,
@@ -24,24 +27,26 @@ if __name__ == '__main__':
     parser.add_argument('-kd_loss_function', default='l1', type=str, help='l1, l1s, l2')
     parser.add_argument('-kl_div_T', default=1, type=float, help='The temperature of KL_Divergence.')
 
-    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/mahnob', type=str,
+    parser.add_argument('-dataset_load_path', default='/home/zhangsu/dataset/Mahnob_debug', type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
     parser.add_argument('-dataset_folder', default='compacted_{:d}'.format(frame_size), type=str,
                         help='The root directory of the dataset.')  # /scratch/users/ntu/su012/dataset/mahnob
-    parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load', type=str,
+    parser.add_argument('-model_load_path', default='/home/zhangsu/phd2/load/model_load_path', type=str,
                         help='The path to load the trained model.')  # /scratch/users/ntu/su012/pretrained_model
     parser.add_argument('-model_save_path', default='/home/zhangsu/phd2/save', type=str,
                         help='The path to save the trained model ')  # /scratch/users/ntu/su012/trained_model
     parser.add_argument('-python_package_path', default='/home/zhangsu/phd2', type=str,
                         help='The path to the entire repository.')
-    parser.add_argument('-knowledge_load_path', default='/home/zhangsu/phd2/load/emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame', type=str,
+    # parser.add_argument('-knowledge_load_path', default='/home/zhangsu/phd2/load/emo_kd_2d1d_reg_v_frame_test/knowledge_2d1d_frame', type=str,
+    #                     help='The path to the knowledge from teacher model.')
+    parser.add_argument('-knowledge_load_path', default='/home/zhangsu/phd2/load/model_load_path/knowledge_folder/knowledge_2d1d_frame', type=str,
                         help='The path to the knowledge from teacher model.')
     parser.add_argument('-save_model', default=1, type=int, help='Whether to save the model?')
 
     # Models
     parser.add_argument('-model_name', default="1d_only", help='Model: lstm_only, 1d_only')
 
-    parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.86272",
+    parser.add_argument('-backbone_state_dict_frame', default="model_state_dict_0.874",
                         help='The filename for the backbone state dict.')
     parser.add_argument('-backbone_state_dict_eeg', default="mahnob_reg_v",
                         help='The filename for the backbone state dict.')

@@ -16,7 +16,7 @@ class GroupEegRawDataNormalize(object):
     def __call__(self, eeg_raw):
 
         for k in range(eeg_raw.shape[0]):
-            eeg_raw[0, :, :] =  (eeg_raw[0, :, :] - self.mean) / self.std
+            eeg_raw[k, :, :] =  (eeg_raw[k, :, :] - self.mean) / self.std
 
         return eeg_raw
 

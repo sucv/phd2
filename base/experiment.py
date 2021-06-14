@@ -18,6 +18,7 @@ class GenericExperiment(object):
         self.model_load_path = args.model_load_path
         self.model_save_path = args.model_save_path
         self.resume = args.resume
+        self.debug = args.debug
         self.config = self.load_config()
         self.init_random_seed()
 
@@ -28,6 +29,7 @@ class GenericExperiment(object):
         if self.args.high_performance_cluster:
             self.gpu = None
             self.cpu = None
+
 
     def load_config(self):
         raise NotImplementedError

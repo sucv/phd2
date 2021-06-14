@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import pearsonr
 
 
-class ConcordanceCorrelationCoefficient:
+class ConcordanceCorrelationCoefficient(object):
     """
     A class for performing concordance correlation coefficient (CCC) centering. Basically, when multiple continuous labels
     are available, it is not a good choice to perform a direct average. Formally, a Lin's CCC centering has to be done.
@@ -129,6 +129,7 @@ class ConcordanceCorrelationCoefficient:
 
         return ccc_agreement
 
+
 def concordance_correlation_coefficient_centering(data):
     r"""
     Perform the CCC centering.
@@ -139,7 +140,8 @@ def concordance_correlation_coefficient_centering(data):
     centered_data = CCC.centered_data
     return centered_data
 
-class ContinuousMetricsCalculatorTrial:
+
+class ContinuousMetricsCalculatorTrial(object):
     r"""
     A class to calculate the metrics, usually rmse, pcc, and ccc for continuous regression.
     """
@@ -193,7 +195,7 @@ class ContinuousMetricsCalculatorTrial:
 
     def calculate_metrics(self):
 
-        # Load the data for three scenarios.
+        # Load the data for trialwise and partitionwise scenarios.
         # They will all be evaluated.
         trialwise_output, trialwise_continuous_label = self.get_trialwise_output_and_continuous_label()
         partitionwise_output, partitionwise_continuous_label = self.get_partitionwise_output_and_continuous_label()
@@ -230,7 +232,8 @@ class ContinuousMetricsCalculatorTrial:
 
         self.metric_record_dict['overall'] = overall_records
 
-class ContinuousMetricsCalculator:
+
+class ContinuousMetricsCalculator(object):
     r"""
     A class to calculate the metrics, usually rmse, pcc, and ccc for continuous regression.
     """
