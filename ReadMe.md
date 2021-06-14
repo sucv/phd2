@@ -100,14 +100,21 @@ the continuous label of valence, the goal of this project is to improve the cons
 | w/   KD   | 0.474      |   0.372 |
 | P-value | 0.007      |    0.047 |
 
+The loss fucntion for knowledge distillation is defined as
+
+    loss = a x ccc_loss(pred, label) + b x L1(knowledge_student, knowledge_teacher), 
+    
+where `a` is set to `1` and `b` is searched for `0, 0.05, 0.10, 0.15, ..., 1.00`. The results for `a=1` and `b=0` are taken 
+as the baseline in the table above.
+
 This part of tasks can be run on command line or Pycharm. You will noticed that the four arguments
  
 + `-dataset_load_path`, the root path of the dataset folder,
 + `-model_load_path`, the root path of model state dictionary and knowledges,
 + `-model_save_path`, the path to save any model state or logs, and
-+ `-python_package_path`, the root path of the Python code,
++ `-python_package_path`, the root path of this Python code,
 
-has to be specified for every main function to be ran. 
+have to be specified for every main function to be executed. 
 
 
 #### Environment<a name="TE"></a>
